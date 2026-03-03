@@ -1,0 +1,96 @@
+{
+  "name": "Daily Investor Nag",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "interval": 8
+            },
+            {
+              "field": "hours",
+              "interval": 16
+            }
+          ]
+        }
+      },
+      "name": "Scheduled Trigger (Daily)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databaseItem",
+        "operation": "getAll",
+        "databaseId": "REPLACE_WITH_YOUR_NOTION_DB_ID",
+        "filters": {
+          "status": {
+            "not": "Completed"
+          },
+          "title": {
+            "contains": "[INVESTOR]"
+          }
+        }
+      },
+      "name": "Find Unfinished Tasks (Notion)",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://openclaw:18789/api/v1/proactive-message",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{$json[\"title\"]}} - Core Request: {{$json[\"Core Request\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Trigger OpenClaw Overlay",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Scheduled Trigger (Daily)": {
+      "main": [
+        [
+          {
+            "node": "Find Unfinished Tasks (Notion)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Unfinished Tasks (Notion)": {
+      "main": [
+        [
+          {
+            "node": "Trigger OpenClaw Overlay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

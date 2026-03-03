@@ -1,0 +1,13 @@
+.env
+
+# Runtime/state directories
+openclaw_config/
+openclaw_workspace/
+ollama_data/
+n8n_workflows/
+
+# Secrets and keys
+*.pem
+*.key
+id_ed25519
+id_ed25519.pub

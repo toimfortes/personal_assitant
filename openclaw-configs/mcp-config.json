@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "$GITHUB_PERSONAL_ACCESS_TOKEN"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "/home/node/openclaw/workspace/agent_knowledge_graph.json"
+      }
+    },
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server"],
+      "env": {
+        "SENTRY_ACCESS_TOKEN": "$SENTRY_ACCESS_TOKEN"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "-p", "mcp-postgres-server", "mcp-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://gemini:gemini123@localhost:5433/family_law_ai"
+      }
+    },
+    "browser": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+}

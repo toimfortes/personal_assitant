@@ -1,0 +1,125 @@
+{
+  "name": "Outlook to Notion (Investor Triage)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute",
+              "value": 5
+            }
+          ]
+        },
+        "filters": {
+          "read": "unread"
+        }
+      },
+      "name": "Microsoft 365 Email",
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "message": [
+            {
+              "role": "system",
+              "content": "You are an Executive Assistant. Triage this email. Is it from an investor or highly critical? Respond in JSON: {\"is_important\": true/false, \"reason\": \"...\", \"summary\": \"...\", \"suggested_action\": \"...\"}"
+            },
+            {
+              "content": "Subject: {{$node[\"Microsoft 365 Email\"].json[\"subject\"]}}\nBody: {{$node[\"Microsoft 365 Email\"].json[\"body\"]}}"
+            }
+          ]
+        },
+        "responseFormat": "json"
+      },
+      "name": "AI Triage (OpenAI)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"AI Triage (OpenAI)\"].json[\"is_important\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Important?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databaseItem",
+        "databaseId": "REPLACE_WITH_YOUR_NOTION_DB_ID",
+        "properties": {
+          "title": "={{$node[\"Microsoft 365 Email\"].json[\"subject\"]}} [INVESTOR]",
+          "Sender": "={{$node[\"Microsoft 365 Email\"].json[\"from\"]}}",
+          "Core Request": "={{$node[\"AI Triage (OpenAI)\"].json[\"summary\"]}}",
+          "Status": "Not Started",
+          "Original Link": "={{$node[\"Microsoft 365 Email\"].json[\"webLink\"]}}"
+        }
+      },
+      "name": "Add to Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Microsoft 365 Email": {
+      "main": [
+        [
+          {
+            "node": "AI Triage (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Triage (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "Is Important?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Important?": {
+      "main": [
+        [
+          {
+            "node": "Add to Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

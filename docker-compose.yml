@@ -1,0 +1,61 @@
+services:
+  # --- n8n: The Workflow Engine ---
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: email-master-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${DOMAIN_NAME:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - automation_network
+
+  # --- OpenClaw: The AI Agent Gateway ---
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: email-master-openclaw
+    restart: unless-stopped
+    ports:
+      - "18789:18789" # Control UI
+    environment:
+      - OPENCLAW_HOME=/home/node/.openclaw
+      - OPENCLAW_WORKSPACE=/home/node/openclaw/workspace
+      - OPENCLAW_SANDBOX=${OPENCLAW_SANDBOX:-1}
+      - OPENCLAW_MCP_CONFIG=/home/node/openclaw/mcp-config.json
+    volumes:
+      - ./openclaw_config:/home/node/.openclaw
+      - ./openclaw_workspace:/home/node/openclaw/workspace
+      - ./openclaw-configs/mcp-config.json:/home/node/openclaw/mcp-config.json
+      # Required for sandboxing code execution
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - automation_network
+    depends_on:
+      - ollama
+
+  # --- Ollama: Local LLM Runner ---
+  ollama:
+    image: ollama/ollama:latest
+    container_name: email-master-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - automation_network
+
+networks:
+  automation_network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+  ollama_data:
