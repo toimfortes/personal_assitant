@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "project": "email_master",
+  "rules": [
+    {
+      "id": "ops.redirect-verbose-output",
+      "description": "Long-running or verbose scripts must redirect output to a log file.",
+      "severity": "warning"
+    },
+    {
+      "id": "security.no-hardcoded-secrets",
+      "description": "Do not commit tokens, API keys, or passwords in source files.",
+      "severity": "error"
+    }
+  ]
+}

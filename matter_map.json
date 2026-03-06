@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "matters": [
+    {
+      "id": "MTR-2026-001",
+      "name": "OpenClaw Personal Assistant Foundation",
+      "scope": [
+        "openclaw-configs/",
+        "openclaw_workspace/",
+        "scripts/",
+        "n8n-workflows/"
+      ]
+    }
+  ]
+}
