@@ -1,5 +1,5 @@
 {
-  "name": "Outlook to Notion (Investor Triage)",
+  "name": "Gmail to Notion (Investor Triage)",
   "nodes": [
     {
       "parameters": {
@@ -10,13 +10,10 @@
               "value": 5
             }
           ]
-        },
-        "filters": {
-          "read": "unread"
         }
       },
-      "name": "Microsoft 365 Email",
-      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1,
       "position": [
         100,
@@ -25,11 +22,12 @@
     },
     {
       "parameters": {
-        "functionCode": "const fs = require('fs');\n\nconst RULES_CSV_PATH = '/home/node/config/triage_rules.csv';\n\nconst defaultBillKeywords = [\n  'bill',\n  'billing',\n  'invoice',\n  'statement',\n  'payment due',\n  'past due',\n  'autopay',\n  'utility',\n  'electric',\n  'gas',\n  'water',\n  'internet',\n  'phone bill',\n  'insurance',\n  'mortgage',\n  'rent',\n  'credit card',\n  'due date'\n];\n\nconst parseCsv = (raw) => {\n  const lines = String(raw || '')\n    .split(/\\r?\\n/)\n    .map((l) => l.trim())\n    .filter((l) => l && !l.startsWith('#'));\n\n  if (!lines.length) return [];\n\n  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());\n  return lines.slice(1).map((line) => {\n    const cols = line.split(',');\n    const row = {};\n    headers.forEach((h, i) => {\n      row[h] = (cols[i] || '').trim();\n    });\n    return row;\n  });\n};\n\nlet rows = [];\ntry {\n  rows = parseCsv(fs.readFileSync(RULES_CSV_PATH, 'utf8'));\n} catch (e) {\n  rows = [];\n}\n\nconst importantDomains = new Set();\nconst importantEmails = new Set();\nconst billKeywords = new Set(defaultBillKeywords);\n\nfor (const row of rows) {\n  const type = String(row.type || row.rule_type || row.kind || '').trim().toLowerCase();\n  const value = String(row.value || row.pattern || row.entry || '').trim().toLowerCase();\n  if (!type || !value) continue;\n\n  if (type === 'domain') {\n    importantDomains.add(value);\n  } else if (type === 'email') {\n    importantEmails.add(value);\n  } else if (type === 'bill_keyword' || type === 'keyword' || type === 'bill') {\n    billKeywords.add(value);\n  }\n}\n\nconst senderRaw = (item.json.From || item.json.from || item.json.sender || item.json.email || '').toString();\nconst emailMatch = senderRaw.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/);\nconst senderEmail = (emailMatch ? emailMatch[0] : senderRaw).toLowerCase();\nconst senderDomain = senderEmail.includes('@') ? senderEmail.split('@').pop() : '';\nconst subject = (item.json.subject || item.json.Subject || item.json.snippet || '').toString();\nconst body = (item.json.textPlain || item.json.body || item.json.snippet || '').toString();\nconst content = (subject + '\\n' + body).toLowerCase();\n\nconst importantEmailMatch = senderEmail && importantEmails.has(senderEmail);\nconst importantDomainMatch = senderDomain && Array.from(importantDomains).some((d) => senderDomain === d || senderDomain.endsWith(`.${d}`));\nconst billDetected = Array.from(billKeywords).some((k) => content.includes(k));\n\nconst reasons = [];\nif (billDetected) reasons.push('bill_keyword');\nif (importantEmailMatch) reasons.push('important_email');\nif (importantDomainMatch) reasons.push('important_domain');\n\nitem.json.sender_email = senderEmail;\nitem.json.sender_domain = senderDomain;\nitem.json.subject_normalized = subject;\nitem.json.body_normalized = body;\nitem.json._triage = {\n  bill_detected: billDetected,\n  important_list_match: importantEmailMatch || importantDomainMatch,\n  force_important: billDetected || importantEmailMatch || importantDomainMatch,\n  rule_reason: reasons.join(',') || ''\n};\n\nreturn item;"
+        "jsCode": "const fs = require('fs');\n\nconst RULES_CSV_PATH = '/home/node/config/triage_rules.csv';\n\nconst defaultBillKeywords = [\n  'bill', 'billing', 'invoice', 'statement', 'payment due', 'past due',\n  'autopay', 'utility', 'electric', 'gas', 'water', 'internet',\n  'phone bill', 'insurance', 'mortgage', 'rent', 'credit card', 'due date'\n];\n\nconst parseCsv = (raw) => {\n  const lines = String(raw || '').split(/\\r?\\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));\n  if (!lines.length) return [];\n  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());\n  return lines.slice(1).map((line) => {\n    const cols = line.split(',');\n    const row = {};\n    headers.forEach((h, i) => { row[h] = (cols[i] || '').trim(); });\n    return row;\n  });\n};\n\nlet rows = [];\ntry { rows = parseCsv(fs.readFileSync(RULES_CSV_PATH, 'utf8')); } catch (e) { rows = []; }\n\nconst importantDomains = new Set();\nconst importantEmails = new Set();\nconst billKeywords = new Set(defaultBillKeywords);\n\nfor (const row of rows) {\n  const type = String(row.type || '').trim().toLowerCase();\n  const value = String(row.value || '').trim().toLowerCase();\n  if (!type || !value) continue;\n  if (type === 'domain') importantDomains.add(value);\n  else if (type === 'email') importantEmails.add(value);\n  else if (type === 'bill_keyword') billKeywords.add(value);\n}\n\nconst results = [];\nfor (const item of $input.all()) {\n  const senderRaw = (item.json.From || item.json.from || item.json.sender || item.json.email || '').toString();\n  const emailMatch = senderRaw.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/);\n  const senderEmail = (emailMatch ? emailMatch[0] : senderRaw).toLowerCase();\n  const senderDomain = senderEmail.includes('@') ? senderEmail.split('@').pop() : '';\n  const subject = (item.json.subject || item.json.Subject || item.json.snippet || '').toString();\n  const body = (item.json.textPlain || item.json.body || item.json.snippet || '').toString();\n  const content = (subject + '\\n' + body).toLowerCase();\n\n  const importantEmailMatch = senderEmail && importantEmails.has(senderEmail);\n  const importantDomainMatch = senderDomain && Array.from(importantDomains).some((d) => senderDomain === d || senderDomain.endsWith('.' + d));\n  const billDetected = Array.from(billKeywords).some((k) => content.includes(k));\n\n  const reasons = [];\n  if (billDetected) reasons.push('bill_keyword');\n  if (importantEmailMatch) reasons.push('important_email');\n  if (importantDomainMatch) reasons.push('important_domain');\n\n  results.push({\n    json: {\n      ...item.json,\n      sender_email: senderEmail,\n      sender_domain: senderDomain,\n      subject_normalized: subject,\n      body_normalized: body,\n      _triage: {\n        bill_detected: billDetected,\n        important_list_match: importantEmailMatch || importantDomainMatch,\n        force_important: billDetected || importantEmailMatch || importantDomainMatch,\n        rule_reason: reasons.join(',') || ''\n      }\n    }\n  });\n}\nreturn results;",
+        "mode": "runOnceForAllItems"
       },
       "name": "Normalize Sender & Rules",
-      "type": "n8n-nodes-base.functionItem",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         300,
         300
@@ -120,7 +118,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { let ai = {}; try { ai = JSON.parse($node['AI Triage (Local Ollama)'].json['response'] || $node['AI Triage (Local Ollama)'].json['thinking'] || '{}'); } catch (e) {} const fromField = $node['Microsoft 365 Email'].json['from']; const senderText = (typeof fromField === 'string' ? fromField : (fromField?.emailAddress?.address || fromField?.emailAddress?.name || 'unknown')); return JSON.stringify({ parent: { data_source_id: ($env['NOTION_DATA_SOURCE_ID'] || '2c91d511-87a6-805c-ab38-000b18d92545') }, properties: { Name: { title: [{ text: { content: (((($node['Microsoft 365 Email'].json['subject'] || 'No Subject') + ' [INVESTOR]').substring(0, 100))) } }] }, Sender: { rich_text: [{ text: { content: (senderText.substring(0, 100)) } }] }, 'Sender Domain': { rich_text: [{ text: { content: (($node['Normalize Sender & Rules'].json['sender_domain'] || '').substring(0, 100)) } }] }, 'Core Request': { rich_text: [{ text: { content: ((ai.summary || 'AI triage failed').substring(0, 2000)) } }] }, 'Importance Reason': { rich_text: [{ text: { content: ((($node['Normalize Sender & Rules'].json['_triage']['rule_reason'] || ai.reason || '')).substring(0, 2000)) } }] }, Category: { select: { name: ($node['Normalize Sender & Rules'].json['_triage']['bill_detected'] && !$node['Normalize Sender & Rules'].json['_triage']['funds_info_detected'] ? 'Bill' : (ai.category || 'Important')) } }, 'Reply Draft': { rich_text: [{ text: { content: ((ai.suggested_action || '').substring(0, 2000)) } }] }, Status: { select: { name: 'Not Started' } }, 'Original Link': { url: $node['Microsoft 365 Email'].json['webLink'] || null }, 'Email Date': { date: { start: $node['Microsoft 365 Email'].json['receivedDateTime'] || null } }, 'Email Account': { rich_text: [{ text: { content: 'Outlook' } }] } } }); })() }}"
+        "jsonBody": "={{ (() => { let ai = {}; try { ai = JSON.parse($node['AI Triage (Local Ollama)'].json['response'] || $node['AI Triage (Local Ollama)'].json['thinking'] || '{}'); } catch (e) {} return JSON.stringify({ parent: { data_source_id: ($env['NOTION_DATA_SOURCE_ID'] || '2c91d511-87a6-805c-ab38-000b18d92545') }, properties: { Name: { title: [{ text: { content: ((($node['Gmail Trigger'].json['subject'] || $node['Gmail Trigger'].json['Subject'] || 'No Subject') + ' [INVESTOR]').substring(0, 100)) } }] }, Sender: { rich_text: [{ text: { content: (($node['Gmail Trigger'].json['From'] || $node['Gmail Trigger'].json['from'] || $node['Gmail Trigger'].json['sender'] || $node['Gmail Trigger'].json['email'] || '').substring(0, 100)) } }] }, 'Sender Domain': { rich_text: [{ text: { content: (($node['Normalize Sender & Rules'].json['sender_domain'] || '').substring(0, 100)) } }] }, 'Core Request': { rich_text: [{ text: { content: ((ai.summary || 'AI triage failed').substring(0, 2000)) } }] }, 'Importance Reason': { rich_text: [{ text: { content: ((($node['Normalize Sender & Rules'].json['_triage']['rule_reason'] || ai.reason || '')).substring(0, 2000)) } }] }, Category: { select: { name: ($node['Normalize Sender & Rules'].json['_triage']['bill_detected'] ? 'Bill' : (ai.category || 'Important')) } }, 'Reply Draft': { rich_text: [{ text: { content: ((ai.suggested_action || '').substring(0, 2000)) } }] }, Status: { select: { name: 'Not Started' } }, 'Original Link': { url: $node['Gmail Trigger'].json['webViewLink'] || $node['Gmail Trigger'].json['webLink'] || ('https://mail.google.com/mail/u/0/#inbox/' + ($node['Gmail Trigger'].json['id'] || '')) } } }); })() }}"
       },
       "name": "Add to Notion",
       "type": "n8n-nodes-base.httpRequest",
@@ -168,7 +166,7 @@
             },
             {
               "name": "message",
-              "value": "={{\"New important email triaged from Outlook. From: \" + $node[\"Normalize Sender & Rules\"].json[\"sender_email\"] + \". Subject: \" + $node[\"Normalize Sender & Rules\"].json[\"subject_normalized\"] + \". Category: \" + ($node[\"Normalize Sender & Rules\"].json[\"_triage\"][\"bill_detected\"] ? \"Bill\" : (JSON.parse($node[\"AI Triage (Local Ollama)\"].json[\"response\"]).category || \"Important\")) + \". Summary: \" + JSON.parse($node[\"AI Triage (Local Ollama)\"].json[\"response\"]).summary + \". This has been added to Notion. Notify me proactively and offer to draft a reply if needed.\"}}"
+              "value": "={{\"New important email triaged from Gmail. From: \" + $node[\"Normalize Sender & Rules\"].json[\"sender_email\"] + \". Subject: \" + $node[\"Normalize Sender & Rules\"].json[\"subject_normalized\"] + \". Category: \" + ($node[\"Normalize Sender & Rules\"].json[\"_triage\"][\"bill_detected\"] ? \"Bill\" : (JSON.parse($node[\"AI Triage (Local Ollama)\"].json[\"response\"]).category || \"Important\")) + \". Summary: \" + JSON.parse($node[\"AI Triage (Local Ollama)\"].json[\"response\"]).summary + \". This has been added to Notion. Notify me proactively and offer to draft a reply if needed.\"}}"
             }
           ]
         }
@@ -183,7 +181,7 @@
     }
   ],
   "connections": {
-    "Microsoft 365 Email": {
+    "Gmail Trigger": {
       "main": [
         [
           {

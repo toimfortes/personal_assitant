@@ -1,0 +1,205 @@
+{
+  "id": "FgXJ0dTlOibbKHr0",
+  "name": "Backfill Gmail Triage (One-Time)",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 50,
+        "options": {
+          "labelIds": [
+            "INBOX"
+          ]
+        },
+        "filters": {
+          "q": "after:2026/02/03 before:2026/03/06 category:primary"
+        }
+      },
+      "name": "Gmail Get All",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jACGwijQXj0rEYqR",
+          "name": "Gmail account 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const importantDomains = new Set(['antharistheapeutics.com', 'taxadvisorypartnership.com', 'met.police.uk', 'police.uk', 'gov.uk', 'mintz.com']);\nconst importantEmails = new Set(['seffron@mintz.com']);\n\nconst results = [];\nfor (const item of $input.all()) {\n  const senderRaw = (item.json.From || item.json.from || item.json.sender || item.json.email || '').toString();\n  const emailMatch = senderRaw.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/);\n  const senderEmail = (emailMatch ? emailMatch[0] : senderRaw).toLowerCase();\n  const senderDomain = senderEmail.includes('@') ? senderEmail.split('@').pop() : '';\n  const subject = (item.json.subject || item.json.Subject || item.json.snippet || '').toString();\n  const body = (item.json.textPlain || item.json.body || item.json.snippet || '').toString().substring(0, 2000);\n\n  const importantEmailMatch = senderEmail && importantEmails.has(senderEmail);\n  const importantDomainMatch = senderDomain && Array.from(importantDomains).some((d) => senderDomain === d || senderDomain.endsWith('.' + d));\n\n  results.push({\n    json: {\n      ...item.json,\n      sender_email: senderEmail,\n      sender_domain: senderDomain,\n      subject_normalized: subject,\n      body_normalized: body,\n      _triage: {\n        important_list_match: importantEmailMatch || importantDomainMatch,\n        force_important: importantEmailMatch || importantDomainMatch,\n        rule_reason: importantEmailMatch ? 'important_email' : (importantDomainMatch ? 'important_domain' : '')\n      }\n    }\n  });\n}\nreturn results;",
+        "mode": "runOnceForAllItems"
+      },
+      "name": "Normalize Sender & Rules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "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"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: ($env.N8N_ANTHROPIC_MODEL_PRIMARY || 'claude-haiku-4-5-20251001'), max_tokens: 300, messages: [{ role: 'user', content: 'You are an Executive Assistant triaging emails for Antonio Fortes. Classify this email. Return ONLY valid JSON with keys: is_important (boolean), is_bill (boolean), category (string: one of Important/Bill/Legal/Personal/Newsletter/Spam), reason (string), summary (string), suggested_action (string). An email is important if it is from a real person or organization requiring action, is legal/official correspondence, is a bill/payment, or is from a known VIP. Newsletters, marketing, promotions, and automated notifications are NOT important.\\n\\nForce important: ' + $node['Normalize Sender & Rules'].json['_triage']['force_important'] + '\\nRule reason: ' + ($node['Normalize Sender & Rules'].json['_triage']['rule_reason'] || 'none') + '\\n\\nFrom: ' + $node['Normalize Sender & Rules'].json['sender_email'] + '\\nDomain: ' + $node['Normalize Sender & Rules'].json['sender_domain'] + '\\nSubject: ' + $node['Normalize Sender & Rules'].json['subject_normalized'] + '\\nBody: ' + $node['Normalize Sender & Rules'].json['body_normalized'].substring(0, 1500) }] }) }}",
+        "options": {}
+      },
+      "name": "AI Triage (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        700,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ (() => { try { const raw = $node['AI Triage (Claude)'].json.content?.[0]?.text || ''; const cleaned = raw.replace(/```json\\n?/g, '').replace(/```/g, '').trim(); const p = JSON.parse(cleaned); return p.is_important === true || $node['Normalize Sender & Rules'].json['_triage']['force_important']; } catch(e) { return $node['Normalize Sender & Rules'].json['_triage']['force_important'] || false; } })() }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Important?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"NOTION_API_KEY\"]}}"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "={{$env[\"NOTION_API_VERSION\"] || \"2025-09-03\"}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const raw = ($node['AI Triage (Claude)'].json.content?.[0]?.text || '{}'); const cleaned = raw.replace(/```json\\n?/g, '').replace(/```/g, '').trim(); let ai = {}; try { ai = JSON.parse(cleaned); } catch(e) {} return JSON.stringify({ parent: { data_source_id: ($env['NOTION_DATA_SOURCE_ID'] || '2c91d511-87a6-805c-ab38-000b18d92545') }, properties: { Name: { title: [{ text: { content: (($node['Gmail Get All'].json['subject'] || $node['Gmail Get All'].json['Subject'] || 'No Subject') + ' [TRIAGE]').substring(0, 100) } }] }, Sender: { rich_text: [{ text: { content: ($node['Gmail Get All'].json['From'] || $node['Gmail Get All'].json['from'] || 'unknown').substring(0, 100) } }] }, 'Sender Domain': { rich_text: [{ text: { content: ($node['Normalize Sender & Rules'].json['sender_domain'] || '').substring(0, 100) } }] }, 'Core Request': { rich_text: [{ text: { content: (ai.summary || 'AI triage failed').substring(0, 2000) } }] }, 'Importance Reason': { rich_text: [{ text: { content: ($node['Normalize Sender & Rules'].json['_triage']['rule_reason'] || ai.reason || '').substring(0, 2000) } }] }, Category: { select: { name: ai.is_bill ? 'Bill' : (ai.category || 'Important') } }, 'Reply Draft': { rich_text: [{ text: { content: (ai.suggested_action || '').substring(0, 2000) } }] }, Status: { select: { name: 'Not Started' } }, 'Original Link': { url: $node['Gmail Get All'].json['webViewLink'] || $node['Gmail Get All'].json['webLink'] || ('https://mail.google.com/mail/u/0/#inbox/' + ($node['Gmail Get All'].json['id'] || '')) } } }); })() }}",
+        "options": {}
+      },
+      "name": "Add to Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1100,
+        300
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail Get All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Get All": {
+      "main": [
+        [
+          {
+            "node": "Normalize Sender & Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Sender & Rules": {
+      "main": [
+        [
+          {
+            "node": "AI Triage (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Triage (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Is Important?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Important?": {
+      "main": [
+        [
+          {
+            "node": "Add to Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

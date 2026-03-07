@@ -1,56 +1,170 @@
 services:
-  # --- n8n: The Workflow Engine ---
   n8n:
     image: n8nio/n8n:latest
     container_name: email-master-n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
       - N8N_HOST=${DOMAIN_NAME:-localhost}
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - NODE_ENV=production
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=${TIMEZONE:-UTC}
+      - TZ=${TIMEZONE:-UTC}
+      - OPENCLAW_HOOKS_TOKEN=${OPENCLAW_HOOKS_TOKEN}
+      - NOTION_API_KEY=${NOTION_API_KEY}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      - NOTION_DATA_SOURCE_ID=${NOTION_DATA_SOURCE_ID}
+      - NOTION_API_VERSION=${NOTION_API_VERSION:-2025-09-03}
+      - NODE_FUNCTION_ALLOW_BUILTIN=fs,path
+      - N8N_OLLAMA_MODEL_PRIMARY=${N8N_OLLAMA_MODEL_PRIMARY:-qwen3.5:27b}
+      - N8N_OLLAMA_MODEL_FALLBACK=${N8N_OLLAMA_MODEL_FALLBACK:-glm-4.7-flash}
+      - N8N_ANTHROPIC_MODEL_PRIMARY=${N8N_ANTHROPIC_MODEL_PRIMARY:-claude-haiku-4-5-20251001}
     volumes:
       - n8n_data:/home/node/.n8n
-    networks:
-      - automation_network
-
-  # --- OpenClaw: The AI Agent Gateway ---
-  openclaw:
-    image: ghcr.io/openclaw/openclaw:latest
-    container_name: email-master-openclaw
-    restart: unless-stopped
-    ports:
-      - "18789:18789" # Control UI
-    environment:
-      - OPENCLAW_HOME=/home/node/.openclaw
-      - OPENCLAW_WORKSPACE=/home/node/openclaw/workspace
-      - OPENCLAW_SANDBOX=${OPENCLAW_SANDBOX:-1}
-      - OPENCLAW_MCP_CONFIG=/home/node/openclaw/mcp-config.json
-    volumes:
-      - ./openclaw_config:/home/node/.openclaw
-      - ./openclaw_workspace:/home/node/openclaw/workspace
-      - ./openclaw-configs/mcp-config.json:/home/node/openclaw/mcp-config.json
-      # Required for sandboxing code execution
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config:/home/node/config:ro
     networks:
       - automation_network
     depends_on:
+      - openclaw-gateway
+
+  openclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw
+      args:
+        OPENCLAW_IMAGE: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    image: email-master-openclaw:latest
+    container_name: email-master-openclaw-gateway
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "127.0.0.1:${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+    environment:
+      - PATH=/home/node/.openclaw/workspace/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - HOME=/home/node
+      - TERM=xterm-256color
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
+      - OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+      - KILOCODE_API_KEY=${KILOCODE_API_KEY:-}
+      - NOTION_API_KEY=${NOTION_API_KEY}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      - NOTION_DATA_SOURCE_ID=${NOTION_DATA_SOURCE_ID}
+      - NOTION_API_VERSION=${NOTION_API_VERSION:-2025-09-03}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MS_CLIENT_ID=${MS_CLIENT_ID:-}
+      - MS_CLIENT_SECRET=${MS_CLIENT_SECRET:-}
+      - MS_TENANT_ID=${MS_TENANT_ID:-common}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-ollama-local}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_HOST=http://ollama:11434
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY:-}
+      - GOPLACES_ENFORCE_PROXY=${GOPLACES_ENFORCE_PROXY:-1}
+      - GOPLACES_HTTPS_PROXY=${GOPLACES_HTTPS_PROXY:-http://host.docker.internal:3128}
+      - GOPLACES_ALLOW_BASE_URL_OVERRIDE=${GOPLACES_ALLOW_BASE_URL_OVERRIDE:-0}
+      - GOPLACES_ALLOW_ANY_PROXY=${GOPLACES_ALLOW_ANY_PROXY:-0}
+    volumes:
+      - ./openclaw_config:/home/node/.openclaw
+      - ./openclaw_workspace:/home/node/.openclaw/workspace
+      - ./openclaw_config/.config:/home/node/.config
+      - ${HOME}/.gemini:/home/node/.gemini
+      - ./openclaw-configs/mcp-config.json:/home/node/.openclaw/mcp-config.json:ro
+      - ./memory:/home/node/.openclaw/workspace/memory:ro
+      - ./contracts:/home/node/.openclaw/workspace/contracts:ro
+      - ./docs/governance:/home/node/.openclaw/workspace/docs/governance:ro
+      - ./scripts:/home/node/.openclaw/workspace/scripts:ro
+      - ./config:/home/node/.openclaw/workspace/config
+      - ./scripts/openclaw-gemini-patch.sh:/usr/local/bin/openclaw-gemini-patch.sh:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - automation_network
+    init: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/openclaw-gemini-patch.sh"]
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-loopback}",
+        "--port",
+        "18789"
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
       - ollama
 
-  # --- Ollama: Local LLM Runner ---
+  # Use via: docker compose run --rm openclaw-cli <openclaw command>
+  openclaw-cli:
+    image: email-master-openclaw:latest
+    container_name: email-master-openclaw-cli
+    profiles: ["tools"]
+    network_mode: "service:openclaw-gateway"
+    environment:
+      - PATH=/home/node/.openclaw/workspace/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - HOME=/home/node
+      - TERM=xterm-256color
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
+      - OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
+      - KILOCODE_API_KEY=${KILOCODE_API_KEY:-}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-ollama-local}
+      - NOTION_API_KEY=${NOTION_API_KEY}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      - NOTION_DATA_SOURCE_ID=${NOTION_DATA_SOURCE_ID}
+      - NOTION_API_VERSION=${NOTION_API_VERSION:-2025-09-03}
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY:-}
+      - GOPLACES_ENFORCE_PROXY=${GOPLACES_ENFORCE_PROXY:-1}
+      - GOPLACES_HTTPS_PROXY=${GOPLACES_HTTPS_PROXY:-http://host.docker.internal:3128}
+      - GOPLACES_ALLOW_BASE_URL_OVERRIDE=${GOPLACES_ALLOW_BASE_URL_OVERRIDE:-0}
+      - GOPLACES_ALLOW_ANY_PROXY=${GOPLACES_ALLOW_ANY_PROXY:-0}
+    volumes:
+      - ./openclaw_config:/home/node/.openclaw
+      - ./openclaw_workspace:/home/node/.openclaw/workspace
+      - ./memory:/home/node/.openclaw/workspace/memory:ro
+      - ./contracts:/home/node/.openclaw/workspace/contracts:ro
+      - ./docs/governance:/home/node/.openclaw/workspace/docs/governance:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: ["node", "dist/index.js"]
+    depends_on:
+      - openclaw-gateway
+
   ollama:
     image: ollama/ollama:latest
     container_name: email-master-ollama
     restart: unless-stopped
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     networks:
       - automation_network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
 networks:
   automation_network:

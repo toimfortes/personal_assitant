@@ -1,0 +1,247 @@
+{
+  "name": "Email Action Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "interval": 2
+            }
+          ]
+        }
+      },
+      "name": "Every 2 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://api.notion.com/v1/data_sources/\" + ($env[\"NOTION_DATA_SOURCE_ID\"] || \"2c91d511-87a6-805c-ab38-000b18d92545\") + \"/query\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"NOTION_API_KEY\"]}}"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "={{$env[\"NOTION_API_VERSION\"] || \"2025-09-03\"}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"filter\":{\"or\":[{\"property\":\"Status\",\"select\":{\"equals\":\"Spam / Delete\"}},{\"property\":\"Status\",\"select\":{\"equals\":\"Resolved\"}}]}}",
+        "options": {}
+      },
+      "name": "Find Actioned Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        300,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst pages = resp.results || [];\nif (pages.length === 0) return [];\n\nconst results = [];\nfor (const page of pages) {\n  const props = page.properties || {};\n  const title = props.Name?.title?.[0]?.text?.content || 'untitled';\n  const status = props.Status?.select?.name || '';\n  const link = props['Original Link']?.url || '';\n\n  // Extract Gmail message ID from link\n  let gmailId = '';\n  if (link.includes('#inbox/')) {\n    gmailId = link.split('#inbox/').pop();\n  }\n\n  results.push({\n    json: {\n      pageId: page.id,\n      title,\n      status,\n      gmailId,\n      originalLink: link\n    }\n  });\n}\nreturn results;",
+        "mode": "runOnceForAllItems"
+      },
+      "name": "Extract Page Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "Spam / Delete"
+            }
+          ]
+        }
+      },
+      "name": "Is Spam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $json.gmailId }}"
+      },
+      "name": "Trash in Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        920,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "jACGwijQXj0rEYqR",
+          "name": "Gmail account 1"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ \"https://api.notion.com/v1/pages/\" + $json.pageId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"NOTION_API_KEY\"]}}"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "={{$env[\"NOTION_API_VERSION\"] || \"2025-09-03\"}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ archived: true }) }}",
+        "options": {}
+      },
+      "name": "Archive in Notion (Resolved)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        920,
+        420
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ \"https://api.notion.com/v1/pages/\" + $json.pageId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"NOTION_API_KEY\"]}}"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "={{$env[\"NOTION_API_VERSION\"] || \"2025-09-03\"}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ archived: true }) }}",
+        "options": {}
+      },
+      "name": "Archive in Notion (Spam)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1140,
+        200
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Every 2 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Find Actioned Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Actioned Tasks": {
+      "main": [
+        [
+          {
+            "node": "Extract Page Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Page Data": {
+      "main": [
+        [
+          {
+            "node": "Is Spam?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Spam?": {
+      "main": [
+        [
+          {
+            "node": "Trash in Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Archive in Notion (Resolved)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trash in Gmail": {
+      "main": [
+        [
+          {
+            "node": "Archive in Notion (Spam)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

@@ -1,0 +1,202 @@
+{
+  "name": "Notion Approved Gmail Send [APPROVAL-GATED]",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "interval": 2
+            }
+          ]
+        }
+      },
+      "name": "Scheduled Trigger (Every 2m)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://api.notion.com/v1/data_sources/\" + ($env[\"NOTION_DATA_SOURCE_ID\"] || \"2c91d511-87a6-805c-ab38-000b18d92545\") + \"/query\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"NOTION_API_KEY\"]}}"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "={{$env[\"NOTION_API_VERSION\"] || \"2025-09-03\"}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"filter\":{\"and\":[{\"property\":\"Status\",\"select\":{\"equals\":\"Approved to Send\"}},{\"property\":\"Name\",\"title\":{\"contains\":\"[INVESTOR]\"}},{\"property\":\"Triage Feedback\",\"select\":{\"is_empty\":true}}]}}",
+        "options": {}
+      },
+      "name": "Find Approved Drafts (Notion)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const response = items[0]?.json || {};\nconst pages = response.results || [];\nreturn pages.map((page) => {\n  const props = page.properties || {};\n  const sender = (props.Sender?.rich_text?.map((part) => part.plain_text || '').join('') || '').trim();\n  const email = (sender.match(/<([^>]+)>/)?.[1]\n    || sender.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/)?.[0]\n    || '').trim();\n  const replyDraft = (props['Reply Draft']?.rich_text?.map((part) => part.plain_text || '').join('') || '').trim();\n  const title = (props.Name?.title?.map((part) => part.plain_text || '').join('') || 'Follow-up').trim();\n  return {\n    json: {\n      recipient: email,\n      message: replyDraft,\n      subject: `Re: ${title}`,\n      pageId: page.id || '',\n      title,\n      Sender: sender,\n      'Reply Draft': replyDraft,\n    }\n  };\n});"
+      },
+      "name": "Prepare Send Fields",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ !!$json[\"recipient\"] && !!$json[\"message\"] && $json[\"message\"].trim().length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Ready to Send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json[\"recipient\"]}}",
+        "subject": "={{$json[\"subject\"]}}",
+        "emailType": "text",
+        "message": "={{$json[\"message\"]}}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Send Gmail Message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1020,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ \"https://api.notion.com/v1/pages/\" + $json[\"pageId\"] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"NOTION_API_KEY\"]}}"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "={{$env[\"NOTION_API_VERSION\"] || \"2025-09-03\"}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { Status: { select: { name: 'Sent' } } } }) }}",
+        "options": {}
+      },
+      "name": "Mark as Sent (Notion)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1240,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Scheduled Trigger (Every 2m)": {
+      "main": [
+        [
+          {
+            "node": "Find Approved Drafts (Notion)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Approved Drafts (Notion)": {
+      "main": [
+        [
+          {
+            "node": "Prepare Send Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Send Fields": {
+      "main": [
+        [
+          {
+            "node": "Ready to Send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready to Send?": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send Gmail Message": {
+      "main": [
+        [
+          {
+            "node": "Mark as Sent (Notion)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

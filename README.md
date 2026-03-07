@@ -1,80 +1,292 @@
-# Email Master: The AI Executive Assistant Stack
+# Email Master: OpenClaw-First Personal Assistant Stack
 
-This system is designed to ensure you never miss a critical investor email and stay on top of your tasks through a persistent AI overlay.
+This repository is now structured around **OpenClaw as the assistant skeleton**, with **n8n as the integration/orchestration layer**.
 
-## 🏗 Architecture Overview
+## Architecture
 
-1. **Inbound Filter (n8n Backend):**
-   - **Trigger:** Polls Microsoft 365 Outlook every 5 minutes.
-   - **Processor:** AI Triage (GPT-4o/Claude 3.5).
-   - **Logic:** Identifies "Investor" or "Urgent Business" emails based on sender domain and context.
-   - **Storage:** Creates a "Task" in your **Notion** "Investor Communications" database.
+1. **OpenClaw Gateway (Core Assistant Runtime)**
+- Runs the assistant control plane and overlay integration.
+- Exposes secure webhook ingress at `/hooks/*`.
+- Uses dedicated auth tokens:
+  - `OPENCLAW_GATEWAY_TOKEN` for client/gateway auth.
+  - `OPENCLAW_HOOKS_TOKEN` for external automation ingress.
 
-2. **Daily Nag (n8n Backend):**
-   - **Trigger:** Scheduled (Daily 8 AM / 4 PM).
-   - **Query:** Finds uncompleted tasks in Notion where `Tag = [INVESTOR]`.
-   - **Action:** Triggers a proactive message in the **OpenClaw (Moltbot)** overlay.
+2. **n8n (Automation Integrations)**
+- Polls Outlook, triages important emails, writes tasks to Notion.
+- Sends proactive reminders into OpenClaw via `POST /hooks/agent` with bearer token auth.
 
-3. **Live Assistant (OpenClaw Overlay):**
-   - **Interface:** Persistent desktop overlay for real-time interaction.
-   - **Capabilities:**
-     - Summarize unread investor emails on demand.
-     - Draft replies directly into your Outlook "Drafts" folder.
-     - Provide proactive reminders ("Hey, you still haven't replied to [Investor]...").
+3. **Ollama (Optional Local Models)**
+- Available to OpenClaw as a local model backend at `http://ollama:11434`.
 
----
-
-## 🚀 Setup Instructions
-
-### 1. Notion Database
-Create a database in Notion with the following properties:
-- **Title (Name):** Subject of the email.
-- **Status (Select):** Not Started, In Progress, Completed.
-- **Priority (Select):** High (Investor), Medium, Low.
-- **Sender (Email):** The email address of the sender.
-- **Core Request (Text):** AI-extracted summary of what is needed.
-- **Deadline (Date):** Extracted or inferred deadline.
-- **Original Link (URL):** Link to the email in Outlook.
-
-### 2. n8n Workflows
-Import the workflows from the `n8n-workflows/` directory:
-- `triage-outlook-to-notion.json`: Connects Outlook to Notion via AI classification.
-- `daily-investor-nag.json`: Schedules daily reminders via OpenClaw.
-
-### 3. OpenClaw (Moltbot) Configuration
-1. **Install OpenClaw:** Follow the [official installation guide](https://openclaw.ai/install.sh).
-2. **Enable Outlook Skill:**
-   - Create an app in [Azure Portal](https://portal.azure.com/) with `Mail.ReadWrite` and `Mail.Send` permissions.
-   - Add `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET` to your OpenClaw environment.
-3. **Configure Proactive Webhook:**
-   - In OpenClaw's `AGENTS.md`, add: *"You will receive incoming messages via webhook from n8n. When you do, present them as a proactive notification in the overlay."*
-
-### 4. Connect the Desktop Overlay (Moltbot UI)
-To get the "Persistent Overlay" working with your container:
-1.  **Open your OpenClaw Desktop App** (or Moltbot overlay).
-2.  Go to **Settings > Gateway**.
-3.  Change the Connection Type to **"Custom Gateway"**.
-4.  Enter the URL: `http://localhost:18789`.
-5.  **Enter your Gateway Token:** You can find this by running `docker exec email-master-openclaw openclaw token`.
-6.  The overlay will now "wake up" whenever n8n triggers the nag workflow!
-
-### 5. Git-Safe Repo Initialization
-If you want to initialize this directory as a git repository:
+## Quick Start
 
 ```bash
-git init
-git add .
-git commit -m "Initial commit: Email Master stack"
+chmod +x docker-setup.sh verify-stack.sh scripts/governance-check.sh scripts/smoke-test.sh scripts/sync-openclaw-agent-files.sh
+./docker-setup.sh
+docker compose up -d
+./scripts/governance-check.sh
+./verify-stack.sh
+./scripts/smoke-test.sh
 ```
 
-This repo now includes `.gitignore` rules so local runtime state and secrets stay untracked (`.env`, `openclaw_config/`, `openclaw_workspace/`, `ollama_data/`).
+What setup does:
+- Creates required local dirs.
+- Creates `.env` from `.env.example` when missing.
+- Auto-generates `OPENCLAW_GATEWAY_TOKEN` and `OPENCLAW_HOOKS_TOKEN` if placeholders remain.
+- Creates/updates `openclaw_config/openclaw.json` with hooks enabled.
+- Seeds runtime agent files (`AGENTS.md`, `SOUL.md`, `USER.md`, `HEARTBEAT.md`) into `openclaw_config/agents/main/agent/`.
 
----
+## Service Endpoints
 
-## 🛠 Troubleshooting
-If n8n cannot talk to OpenClaw, run `./verify-stack.sh` to diagnose network issues.
+- n8n: `http://localhost:5678`
+- OpenClaw Gateway UI/API: `http://localhost:18789`
+- Ollama API: `http://localhost:11434`
 
-- **Read-Only First:** When setting up n8n, use a scoped API key that only has access to the "Investor Communications" database in Notion.
-- **Draft Mode:** Configure OpenClaw to **draft** replies rather than sending them. You should always review drafts before they go out.
-- **Local Isolation:** Run OpenClaw in a Docker container or dedicated VM if possible.
-- **Ollama Data Location:** Compose now uses a named Docker volume for Ollama (`ollama_data`) instead of `./ollama_data`. If you have an old `./ollama_data` folder from a previous setup, it can be deleted once you're sure you no longer need it.
+## n8n Workflow Import
+
+Import from `n8n-workflows/`:
+- `triage-outlook-to-notion.json`
+- `triage-gmail-to-notion.json`
+- `daily-investor-nag.json`
+- `manual-gmail-reply-manual-approval.json` (optional manual send path)
+- `notion-approved-gmail-send-approval-gated.json` (status-gated send path)
+
+After import:
+- Configure Notion credentials plus one mail source:
+  - Gmail (`gmailOAuth2`) for `triage-gmail-to-notion.json` (recommended), or
+  - Microsoft 365 for `triage-outlook-to-notion.json`.
+- No OpenAI/Anthropic API key is required for the default n8n triage path; model routing is controlled by [config/model_settings.json](/home/antoniofortes/Projects/email_master/config/model_settings.json) and synced into container env.
+- If you use a different Notion workspace target, update `NOTION_DATABASE_ID`, `NOTION_DATA_SOURCE_ID`, and `NOTION_API_VERSION` in [.env](/home/antoniofortes/Projects/email_master/.env) instead of editing workflow JSON by hand.
+- Confirm n8n can read `OPENCLAW_HOOKS_TOKEN` from container env.
+- Configure deterministic triage rules in CSV:
+  - `config/triage_rules.csv`
+  - `type=domain` matches exact domain and subdomains (for example `gov.uk` matches `gov.uk` and `hmrc.gov.uk`)
+  - `type=email` matches exact sender address
+  - `type=bill_keyword` forces bill/important classification when keyword appears in subject/body
+- Ensure the Notion DB has these properties:
+  - `Sender Domain` (rich_text)
+  - `Importance Reason` (rich_text)
+  - `Category` (select, suggested options: `Bill`, `Important`)
+
+Gmail OAuth bootstrap (API-assisted):
+
+```bash
+export N8N_EMAIL='cortexcerebral@gmail.com'
+export N8N_PASSWORD='your_n8n_password'
+export GOOGLE_CLIENT_ID='your_google_oauth_client_id'
+export GOOGLE_CLIENT_SECRET='your_google_oauth_client_secret'
+./scripts/n8n-gmail-oauth-setup.sh "Gmail account 1"
+```
+
+Then open the printed OAuth URL to authorize Gmail.
+
+The daily nag flow now posts to:
+- `http://openclaw-gateway:18789/hooks/agent`
+- Header: `Authorization: Bearer {{$env["OPENCLAW_HOOKS_TOKEN"]}}`
+
+Manual outbound behavior:
+- Keep triage workflows send-free.
+- Use `Manual Gmail Reply [MANUAL-APPROVAL]` only when you explicitly want to send.
+- Or use `Notion Approved Gmail Send [APPROVAL-GATED]` to auto-send only for rows with `Status = Approved to Send` and non-empty `Reply Draft`.
+- Run `scripts/n8n-no-auto-send-guard.sh audit` (or `enforce`) to verify policy.
+
+## OpenClaw Assistant Persona
+
+Use `openclaw-configs/AGENTS.md` as your assistant system prompt baseline.
+
+OpenClaw config generated by setup lives in:
+- `openclaw_config/openclaw.json` (ignored by git)
+
+Refresh runtime assistant files from templates:
+
+```bash
+./scripts/sync-openclaw-agent-files.sh --force
+```
+
+## Structured Memory + Function Contracts
+
+To prevent uncontrolled repo growth, this project enforces:
+- Matter memory index + per-matter files in `memory/`
+- Function contract registry in `contracts/function-registry.json`
+- JSON schemas for matter records, workflows, hook payloads, and MCP config
+
+Run governance validation:
+
+```bash
+./scripts/governance-check.sh
+```
+
+Reference:
+- `docs/governance/STRUCTURED_MEMORY_AND_CONTRACTS.md`
+
+## Code Auditor
+
+Run the repo audit with the bundled toolchain path:
+
+```bash
+./scripts/run-codeauditor.sh
+```
+
+This wrapper ensures `pytest`, `mypy`, `ruff`, `bandit`, `vulture`, and `radon`
+are discoverable during the toolchain phase.
+
+## Model Auth (Web-Auth First)
+
+Run:
+
+```bash
+./scripts/openclaw-interactive-auth.sh all
+```
+
+This config supports:
+- Claude: setup-token flow (interactive, paste token from `claude setup-token`).
+- Codex: interactive OAuth web login. If `openai-codex` is missing from `models auth login` providers, script falls back to `openclaw onboard` and guides Codex OAuth there.
+- Gemini: interactive OAuth web login (`google-gemini-cli` provider/plugin).
+- Kilo: API key only (`KILOCODE_API_KEY`), no web-auth flow currently.
+- Gemini API key mode is intentionally disabled in compose; use OAuth only.
+- OpenAI/Anthropic API keys are intentionally not passed into OpenClaw containers in this repo.
+
+Per-provider interactive auth:
+
+```bash
+./scripts/openclaw-interactive-auth.sh codex
+./scripts/openclaw-interactive-auth.sh claude
+./scripts/openclaw-interactive-auth.sh gemini
+```
+
+Legacy wrapper (runs all three interactive flows):
+
+```bash
+./scripts/openclaw-web-auth-setup.sh
+```
+
+## Local Ollama Model Setup
+
+```bash
+./scripts/openclaw-local-ollama-setup.sh
+```
+
+Optional model argument:
+
+```bash
+./scripts/openclaw-local-ollama-setup.sh llama3.1:8b
+```
+
+## goplaces Hardened Setup
+
+This repo ships a hardened `goplaces` wrapper at:
+- `openclaw_workspace/tools/bin/goplaces`
+
+Security controls enabled by default:
+- blocks `--base-url`, `--routes-base-url`, and `--directions-base-url`
+- unsets `GOOGLE_PLACES_BASE_URL`, `GOOGLE_ROUTES_BASE_URL`, `GOOGLE_DIRECTIONS_BASE_URL`
+- enforces proxy mode when `GOPLACES_ENFORCE_PROXY=1`
+
+1. Set these values in `.env`:
+
+```bash
+GOOGLE_PLACES_API_KEY=your_key
+GOPLACES_ENFORCE_PROXY=1
+GOPLACES_HTTPS_PROXY=http://host.docker.internal:3128
+GOPLACES_ALLOW_BASE_URL_OVERRIDE=0
+GOPLACES_ALLOW_ANY_PROXY=0
+```
+
+2. Apply host Squid policy (requires sudo):
+
+```bash
+sudo ./scripts/setup-goplaces-egress-squid.sh
+```
+
+3. Restart OpenClaw gateway:
+
+```bash
+docker compose up -d openclaw-gateway openclaw-cli
+```
+
+4. Verify in container:
+
+```bash
+docker exec -it email-master-openclaw-gateway sh -lc 'which goplaces && goplaces --version'
+docker exec -it email-master-openclaw-gateway sh -lc 'goplaces search --query "coffee nyc" --json | head -c 300'
+```
+
+Run the consolidated security check anytime:
+
+```bash
+./scripts/smoke-goplaces-security.sh
+```
+
+## Safe Self-Learning (JSON + Human Approval)
+
+Use JSON registry workflow instead of allowing agents to rewrite instruction files directly.
+
+- Approved learnings: `config/agent_learning_registry.json`
+- Pending proposals (ignored by git): `memory/raw/proposed_learnings.json`
+- Pending tier changes (ignored by git): `memory/raw/pending_tier_changes.json`
+- Usage events (ignored by git): `memory/raw/learning_usage_events.jsonl`
+- CLI: `scripts/learning_registry.py`
+
+Initialize tiered memory folders:
+
+```bash
+./scripts/bootstrap-self-improve-memory.sh
+```
+
+Examples:
+
+```bash
+python3 scripts/learning_registry.py propose \
+  --title "Avoid unsafe base-url overrides" \
+  --statement "Use hardened wrappers for external API CLIs and block endpoint overrides by default." \
+  --source "incident-review" \
+  --author "openclaw-agent" \
+  --risk high
+
+python3 scripts/learning_registry.py list-pending
+
+python3 scripts/learning_registry.py approve P-YYYYMMDDHHMMSS-abcdef --approved-by antoniofortes
+
+python3 scripts/learning_registry.py record-use L-YYYYMMDD-0001 --source assistant
+python3 scripts/learning_registry.py suggest-tier-changes
+python3 scripts/learning_registry.py list-tier-changes
+python3 scripts/learning_registry.py apply-tier-change TC-YYYYMMDDHHMMSS-abcdef --approved-by antoniofortes
+```
+
+Pre-install risk scan for external skills:
+
+```bash
+python3 scripts/skill_risk_scan.py /path/to/skill --fail-on high
+```
+
+Consolidated self-improvement safety smoke test:
+
+```bash
+./scripts/smoke-self-improve-security.sh
+```
+
+## OpenClaw CLI (Containerized)
+
+Use the optional CLI service when needed:
+
+```bash
+docker compose --profile tools run --rm openclaw-cli doctor
+docker compose --profile tools run --rm openclaw-cli config get hooks
+```
+
+## Git Hygiene
+
+Runtime state and secrets are ignored by default:
+- `.env`
+- `openclaw_config/`
+- `openclaw_workspace/`
+- `ollama_data/`
+
+## Security Notes
+
+- Keep hooks token dedicated to webhook ingress; do not reuse gateway token.
+- Use draft-first behavior for outbound email actions.
+- Manual outbound policy ADR: `docs/adr/ADR-0001-manual-email-approval-and-consensus-triage.md`
+- Restrict Notion and Outlook credentials to minimum scope required.
+- Gateway, n8n, and Ollama ports are bound to `127.0.0.1` by default.
+- Docker socket is intentionally not mounted into OpenClaw by default.
