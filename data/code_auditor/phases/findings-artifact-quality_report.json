@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-08T18:51:52.899025Z",
+  "generated_at": "2026-03-08T19:26:01.869850Z",
   "phase": "findings-artifact-quality",
   "target_path": ".",
   "findings": [],
@@ -8,7 +8,7 @@
     "phase_name": "findings-artifact-quality",
     "files_scanned": 0,
     "issues_found": 0,
-    "duration_seconds": 0.00027777798823080957,
+    "duration_seconds": 0.0002752490108832717,
     "tool_version": null,
     "critical_count": 0,
     "high_count": 0,

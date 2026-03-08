@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-08T18:51:56.358825Z",
+  "generated_at": "2026-03-08T19:26:04.774902Z",
   "phase": "complexity",
   "target_path": ".",
   "findings": [],
@@ -8,7 +8,7 @@
     "phase_name": "complexity",
     "files_scanned": 0,
     "issues_found": 0,
-    "duration_seconds": 0.541739284992218,
+    "duration_seconds": 0.1289505260065198,
     "tool_version": null,
     "critical_count": 0,
     "high_count": 0,

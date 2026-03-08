@@ -2,9 +2,10 @@
 
 import json
 import sys
-import urllib.request
 from pathlib import Path
 from urllib.parse import quote
+
+import requests  # type: ignore[import-untyped]
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -55,10 +56,9 @@ def load_env() -> dict[str, str]:
 
 
 def notion_request(url: str, headers: dict[str, str], method: str = "GET", body: dict | None = None) -> dict:
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, headers=headers, data=data, method=method)
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    response = requests.request(method, url, headers=headers, json=body, timeout=60)
+    response.raise_for_status()
+    return response.json() if response.content else {}
 
 
 def build_headers(env: dict[str, str]) -> dict[str, str]:

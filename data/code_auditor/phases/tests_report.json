@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-08T18:51:55.584222Z",
+  "generated_at": "2026-03-08T19:26:04.102485Z",
   "phase": "tests",
   "target_path": ".",
   "findings": [],
@@ -8,7 +8,7 @@
     "phase_name": "tests",
     "files_scanned": 0,
     "issues_found": 0,
-    "duration_seconds": 0.24140895999153145,
+    "duration_seconds": 0.20016806200146675,
     "tool_version": null,
     "critical_count": 0,
     "high_count": 0,

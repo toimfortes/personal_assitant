@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-08T18:51:57.364019Z",
+  "generated_at": "2026-03-08T19:26:05.420652Z",
   "phase": "tracing",
   "target_path": ".",
   "findings": [],
@@ -8,7 +8,7 @@
     "phase_name": "tracing",
     "files_scanned": 0,
     "issues_found": 0,
-    "duration_seconds": 1.6300182323902845e-6,
+    "duration_seconds": 1.867010723799467e-6,
     "tool_version": null,
     "critical_count": 0,
     "high_count": 0,

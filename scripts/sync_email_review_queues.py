@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -133,7 +133,7 @@ def main() -> None:
         if not mailbox and "Outlook" in email_account:
             mailbox = outlook_mailbox or "antonio@antharistherapeutics.com"
 
-        properties = {}
+        properties: dict[str, object] = {}
         if current_queue != queue:
             properties["Queue"] = {"select": {"name": queue}}
         if mailbox != current_mailbox:

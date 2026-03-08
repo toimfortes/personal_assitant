@@ -3,10 +3,11 @@
 import argparse
 import json
 import time
-import urllib.request
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
+
+import requests  # type: ignore[import-untyped]
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -45,18 +46,16 @@ def load_notion_headers():
 
 
 def n8n_login_cookie(email: str, password: str) -> str:
-    data = json.dumps({
+    response = requests.post(
+        f"{N8N_BASE}/rest/login",
+        json={
         "emailOrLdapLoginId": email,
         "password": password,
-    }).encode()
-    req = urllib.request.Request(
-        f"{N8N_BASE}/rest/login",
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
+        },
+        timeout=60,
     )
-    with urllib.request.urlopen(req) as resp:
-        cookies = resp.headers.get_all("Set-Cookie") or []
+    response.raise_for_status()
+    cookies = response.headers.get("set-cookie", "").split(", ")
     cookie = "; ".join([c.split(";", 1)[0] for c in cookies if c.startswith("n8n-auth=")])
     if not cookie:
         raise RuntimeError("Failed to obtain n8n-auth cookie")
@@ -64,13 +63,13 @@ def n8n_login_cookie(email: str, password: str) -> str:
 
 
 def fetch_execution(cookie: str, execution_id: str) -> dict:
-    req = urllib.request.Request(
+    response = requests.get(
         f"{N8N_BASE}/rest/executions/{execution_id}",
         headers={"Cookie": cookie},
-        method="GET",
+        timeout=60,
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp)["data"]
+    response.raise_for_status()
+    return response.json()["data"]
 
 
 def decode_execution_data(flat):
@@ -111,10 +110,9 @@ def build_link_sender_map(execution_payload: dict) -> dict[str, str]:
 
 
 def notion_request(url: str, headers: dict, body: dict | None = None, method: str = "POST") -> dict:
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    response = requests.request(method, url, headers=headers, json=body, timeout=60)
+    response.raise_for_status()
+    return response.json() if response.content else {}
 
 
 def query_bad_pages(headers: dict, since: str):

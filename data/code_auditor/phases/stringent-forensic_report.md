@@ -2,7 +2,7 @@
 
 - Target: `.`
 - Findings: 1
-- Duration: 50ms
+- Duration: 51ms
 
 ## Findings (Top 50)
 

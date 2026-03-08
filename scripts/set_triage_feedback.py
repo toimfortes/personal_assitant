@@ -3,9 +3,9 @@
 import argparse
 import json
 import sys
-import urllib.request
-import urllib.error
 from pathlib import Path
+
+import requests  # type: ignore[import-untyped]
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -26,17 +26,12 @@ def load_env() -> dict[str, str]:
 
 
 def notion_request(url: str, headers: dict[str, str], method: str, body: dict) -> dict:
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode(),
-        headers=headers,
-        method=method,
-    )
     try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read().decode())
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode()
+        response = requests.request(method, url, headers=headers, json=body, timeout=60)
+        response.raise_for_status()
+        return response.json() if response.content else {}
+    except requests.HTTPError as exc:  # type: ignore[attr-defined]
+        detail = exc.response.text if exc.response is not None else str(exc)
         raise RuntimeError(f"Notion PATCH failed for {url}: {detail}") from exc
 
 

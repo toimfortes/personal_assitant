@@ -2,17 +2,17 @@
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import tempfile
 import time
-import urllib.error
-import urllib.request
 from functools import lru_cache
 from html import unescape
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote
+
+import requests  # type: ignore[import-untyped]
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -330,14 +330,14 @@ def call_provider(provider_model: str, prompt: str, timeout: int) -> tuple[dict,
 
     if provider == "ollama":
         body = {"model": model, "stream": False, "format": "json", "prompt": prompt}
-        req = urllib.request.Request(
+        response = requests.post(
             "http://127.0.0.1:11434/api/generate",
-            data=json.dumps(body).encode(),
+            json=body,
             headers={"Content-Type": "application/json"},
-            method="POST",
+            timeout=timeout,
         )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read().decode()
+        response.raise_for_status()
+        raw = response.text
         return parse_ollama_output(raw), {"provider": provider_model}
 
     raise RuntimeError(f"Unsupported provider {provider_model}")
@@ -408,17 +408,20 @@ def notion_headers(env: dict[str, str]) -> dict[str, str]:
 
 
 def notion_request(url: str, headers: dict[str, str], method: str = "GET", body: dict | None = None) -> dict:
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    response = requests.request(method, url, headers=headers, json=body, timeout=60)
+    response.raise_for_status()
+    return response.json() if response.content else {}
 
 
 def login_cookie(email: str, password: str) -> str:
-    body = json.dumps({"emailOrLdapLoginId": email, "password": password}).encode()
-    req = urllib.request.Request(f"{N8N_BASE}/rest/login", data=body, headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req) as resp:
-        cookies = resp.headers.get_all("Set-Cookie") or []
+    response = requests.post(
+        f"{N8N_BASE}/rest/login",
+        json={"emailOrLdapLoginId": email, "password": password},
+        headers={"Content-Type": "application/json"},
+        timeout=60,
+    )
+    response.raise_for_status()
+    cookies = response.headers.get("set-cookie", "").split(", ")
     cookie = "; ".join([value.split(";", 1)[0] for value in cookies if value.startswith("n8n-auth=")])
     if not cookie:
         raise RuntimeError("Failed to obtain n8n-auth cookie")
@@ -426,9 +429,13 @@ def login_cookie(email: str, password: str) -> str:
 
 
 def fetch_execution(cookie: str, execution_id: str) -> dict:
-    req = urllib.request.Request(f"{N8N_BASE}/rest/executions/{execution_id}", headers={"Cookie": cookie}, method="GET")
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp)["data"]
+    response = requests.get(
+        f"{N8N_BASE}/rest/executions/{execution_id}",
+        headers={"Cookie": cookie},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()["data"]
 
 
 def decode_execution_data(flat):
@@ -525,7 +532,7 @@ def main() -> None:
     parser.add_argument("--n8n-password", default="Hjkhjk.,23")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
     parser.add_argument("--sleep-ms", type=int, default=250)
-    parser.add_argument("--debug-log", default="/tmp/outlook_retriage_debug.jsonl")
+    parser.add_argument("--debug-log", default=str(PROJECT_ROOT / "data" / "outlook_retriage_debug.jsonl"))
     parser.add_argument("--page-id", action="append", default=[])
     parser.add_argument("--stop-on-provider-failure", action="store_true", default=True)
     args = parser.parse_args()
@@ -545,7 +552,7 @@ def main() -> None:
     if debug_path.exists():
         debug_path.unlink()
 
-    summary = {
+    summary: dict[str, Any] = {
         "target_pages": len(pages),
         "processed": 0,
         "important_kept": 0,

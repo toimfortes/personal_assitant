@@ -2,7 +2,7 @@
 
 - Target: `.`
 - Findings: 0
-- Duration: 542ms
+- Duration: 129ms
 
 ## Findings
 

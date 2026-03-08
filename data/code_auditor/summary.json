@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-08T18:51:52.897066Z",
+  "generated_at": "2026-03-08T19:26:01.869124Z",
   "project_root": ".",
   "phases_completed": [
     "preflight",
@@ -20,12 +20,12 @@
   "phases_failed": [],
   "phases_skipped": [],
   "total_files_scanned": 42,
-  "total_findings": 48,
-  "total_duration_seconds": 4.4619685549114365,
+  "total_findings": 1,
+  "total_duration_seconds": 3.548589366982924,
   "total_critical": 0,
-  "total_high": 46,
+  "total_high": 0,
   "total_medium": 1,
-  "total_low": 1,
+  "total_low": 0,
   "total_info": 0,
   "phase_summaries": {
     "preflight": {
@@ -34,7 +34,7 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.00006500197923742235
+      "duration_seconds": 0.00006330100586637855
     },
     "toolchain": {
       "files_scanned": 6,
@@ -50,7 +50,7 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.00027777798823080957
+      "duration_seconds": 0.0002752490108832717
     },
     "patterns": {
       "files_scanned": 0,
@@ -58,23 +58,23 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.01740928800427355
+      "duration_seconds": 0.017554539983393624
     },
     "lint": {
       "files_scanned": 0,
-      "findings": 1,
+      "findings": 0,
       "critical": 0,
-      "high": 1,
+      "high": 0,
       "medium": 0,
-      "duration_seconds": 0.047449977981159464
+      "duration_seconds": 0.007802724983775988
     },
     "types": {
       "files_scanned": 0,
-      "findings": 35,
+      "findings": 0,
       "critical": 0,
-      "high": 35,
+      "high": 0,
       "medium": 0,
-      "duration_seconds": 2.6189488919917494
+      "duration_seconds": 2.206328861997463
     },
     "tests": {
       "files_scanned": 0,
@@ -82,23 +82,23 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.24140895999153145
+      "duration_seconds": 0.20016806200146675
     },
     "security": {
       "files_scanned": 0,
-      "findings": 10,
-      "critical": 0,
-      "high": 10,
-      "medium": 0,
-      "duration_seconds": 0.4228964709909633
-    },
-    "dead-code": {
-      "files_scanned": 0,
-      "findings": 1,
+      "findings": 0,
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.10944338398985565
+      "duration_seconds": 0.36593250700389035
+    },
+    "dead-code": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.10574785099015571
     },
     "complexity": {
       "files_scanned": 0,
@@ -106,7 +106,7 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.541739284992218
+      "duration_seconds": 0.1289505260065198
     },
     "stringent-forensic": {
       "files_scanned": 30,
@@ -114,7 +114,7 @@
       "critical": 0,
       "high": 0,
       "medium": 1,
-      "duration_seconds": 0.05047591699985787
+      "duration_seconds": 0.05120482700294815
     },
     "policy": {
       "files_scanned": 0,
@@ -122,7 +122,7 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 0.4118519699841272
+      "duration_seconds": 0.4645590499858372
     },
     "tracing": {
       "files_scanned": 0,
@@ -130,9 +130,9 @@
       "critical": 0,
       "high": 0,
       "medium": 0,
-      "duration_seconds": 1.6300182323902845e-6
+      "duration_seconds": 1.867010723799467e-6
     }
   },
-  "ci_pass": false,
-  "ci_fail_reason": "Critical/high issues found in lint"
+  "ci_pass": true,
+  "ci_fail_reason": null
 }

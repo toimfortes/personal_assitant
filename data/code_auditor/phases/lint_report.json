@@ -1,47 +1,17 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-08T18:51:52.916926Z",
+  "generated_at": "2026-03-08T19:26:01.887934Z",
   "phase": "lint",
   "target_path": ".",
-  "findings": [
-    {
-      "id": "LINT-0001",
-      "severity": "high",
-      "category": "lint",
-      "file": "/home/antoniofortes/Projects/email_master/scripts/repair-outlook-backfill-triage.py",
-      "line": 5,
-      "column": 8,
-      "message": "`os` imported but unused",
-      "evidence": "",
-      "remediation": "Fix the lint finding (or add a narrow, justified ignore).",
-      "rule_id": "F401",
-      "confidence": "high",
-      "policy_id": "ruff/F401",
-      "anchor": null,
-      "symbol_id": null,
-      "node_fingerprint": null,
-      "provenance_kind": "tooling",
-      "alternate_provenance": {
-        "source": "tooling_finding",
-        "artifact_uri": "/home/antoniofortes/Projects/email_master/scripts/repair-outlook-backfill-triage.py",
-        "locator": "/home/antoniofortes/Projects/email_master/scripts/repair-outlook-backfill-triage.py:5:8",
-        "line": 5,
-        "column": 8,
-        "evidence_sha256": "46324d685ce86d2e4426cb373def474a603a4dfc9298e7a46e4e346f458c8078"
-      },
-      "tool_name": "ruff",
-      "tool_version": null,
-      "rule_uri": "https://docs.astral.sh/ruff/rules/F401/"
-    }
-  ],
+  "findings": [],
   "metrics": {
     "phase_name": "lint",
     "files_scanned": 0,
-    "issues_found": 1,
-    "duration_seconds": 0.047449977981159464,
+    "issues_found": 0,
+    "duration_seconds": 0.007802724983775988,
     "tool_version": null,
     "critical_count": 0,
-    "high_count": 1,
+    "high_count": 0,
     "medium_count": 0,
     "low_count": 0,
     "info_count": 0
