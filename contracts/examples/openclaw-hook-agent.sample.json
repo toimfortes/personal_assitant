@@ -1,0 +1,7 @@
+{
+  "name": "InvestorNag",
+  "agentId": "main",
+  "wakeMode": "now",
+  "deliver": false,
+  "message": "Investor follow-up pending. Subject: Example subject. Core request: Example core request. Notify me proactively in the overlay."
+}

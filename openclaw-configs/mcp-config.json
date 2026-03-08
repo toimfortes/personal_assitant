@@ -11,7 +11,7 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "env": {
-        "MEMORY_FILE_PATH": "/home/node/openclaw/workspace/agent_knowledge_graph.json"
+        "MEMORY_FILE_PATH": "/home/node/.openclaw/workspace/agent_knowledge_graph.json"
       }
     },
     "sentry": {
@@ -25,12 +25,30 @@
       "command": "npx",
       "args": ["-y", "-p", "mcp-postgres-server", "mcp-postgres"],
       "env": {
-        "DATABASE_URL": "postgresql://gemini:gemini123@localhost:5433/family_law_ai"
+        "DATABASE_URL": "$DATABASE_URL"
       }
     },
     "browser": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "google-workspace": {
+      "command": "npx",
+      "args": ["-y", "@presto-ai/google-workspace-mcp"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "$GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET": "$GOOGLE_CLIENT_SECRET"
+      }
+    },
+    "ms365": {
+      "command": "npx",
+      "args": ["-y", "@softeria/ms-365-mcp-server", "--preset", "mail,calendar,contacts"],
+      "env": {
+        "MS365_MCP_CLIENT_ID": "$MS_CLIENT_ID",
+        "MS365_MCP_CLIENT_SECRET": "$MS_CLIENT_SECRET",
+        "MS365_MCP_TENANT_ID": "$MS_TENANT_ID",
+        "MS365_MCP_TOKEN_CACHE_PATH": "/home/node/.openclaw/workspace/config/ms365-token-cache.json"
+      }
     }
   }
 }

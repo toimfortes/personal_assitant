@@ -17,6 +17,30 @@ FEEDBACK_OPTIONS = [
     {"name": "Misflagged", "color": "orange"},
     {"name": "Needs Rule", "color": "blue"},
 ]
+QUEUE_PROPERTY = "Queue"
+QUEUE_OPTIONS = [
+    {"name": "Action", "color": "blue"},
+    {"name": "Newsletter Review", "color": "yellow"},
+    {"name": "Spam Review", "color": "red"},
+    {"name": "Done", "color": "green"},
+]
+PROVIDER_ACTION_PROPERTY = "Provider Action"
+PROVIDER_ACTION_OPTIONS = [
+    {"name": "None", "color": "gray"},
+    {"name": "Unsubscribe", "color": "blue"},
+    {"name": "Block Sender", "color": "red"},
+    {"name": "Block Domain", "color": "red"},
+    {"name": "Report Spam", "color": "orange"},
+    {"name": "Report Phishing", "color": "purple"},
+]
+PROVIDER_ACTION_STATUS_PROPERTY = "Provider Action Status"
+PROVIDER_ACTION_STATUS_OPTIONS = [
+    {"name": "Pending", "color": "yellow"},
+    {"name": "Done", "color": "green"},
+    {"name": "Skipped", "color": "gray"},
+]
+RETENTION_PROPERTY = "Retention Until"
+MAILBOX_PROPERTY = "Mailbox"
 
 
 def load_env() -> dict[str, str]:
@@ -56,15 +80,34 @@ def main() -> None:
 
     current = notion_request(f"https://api.notion.com/v1/data_sources/{encoded_id}", headers)
     properties = current.get("properties", {})
-    existing = properties.get(FEEDBACK_PROPERTY)
-
     payload = {
         "properties": {
             FEEDBACK_PROPERTY: {
                 "select": {
                     "options": FEEDBACK_OPTIONS,
                 }
-            }
+            },
+            QUEUE_PROPERTY: {
+                "select": {
+                    "options": QUEUE_OPTIONS,
+                }
+            },
+            PROVIDER_ACTION_PROPERTY: {
+                "select": {
+                    "options": PROVIDER_ACTION_OPTIONS,
+                }
+            },
+            PROVIDER_ACTION_STATUS_PROPERTY: {
+                "select": {
+                    "options": PROVIDER_ACTION_STATUS_OPTIONS,
+                }
+            },
+            MAILBOX_PROPERTY: {
+                "email": {},
+            },
+            RETENTION_PROPERTY: {
+                "date": {},
+            },
         }
     }
 
@@ -75,12 +118,23 @@ def main() -> None:
         body=payload,
     )
 
-    updated_property = updated.get("properties", {}).get(FEEDBACK_PROPERTY, {})
-    option_names = [opt.get("name") for opt in updated_property.get("select", {}).get("options", [])]
+    updated_properties = updated.get("properties", {})
     print(json.dumps({
         "data_source_id": data_source_id,
-        "property_previously_present": existing is not None,
-        "feedback_options": option_names,
+        "properties_present": {
+            FEEDBACK_PROPERTY: FEEDBACK_PROPERTY in properties,
+            QUEUE_PROPERTY: QUEUE_PROPERTY in properties,
+            PROVIDER_ACTION_PROPERTY: PROVIDER_ACTION_PROPERTY in properties,
+            PROVIDER_ACTION_STATUS_PROPERTY: PROVIDER_ACTION_STATUS_PROPERTY in properties,
+            MAILBOX_PROPERTY: MAILBOX_PROPERTY in properties,
+            RETENTION_PROPERTY: RETENTION_PROPERTY in properties,
+        },
+        "feedback_options": [opt.get("name") for opt in updated_properties.get(FEEDBACK_PROPERTY, {}).get("select", {}).get("options", [])],
+        "queue_options": [opt.get("name") for opt in updated_properties.get(QUEUE_PROPERTY, {}).get("select", {}).get("options", [])],
+        "provider_action_options": [opt.get("name") for opt in updated_properties.get(PROVIDER_ACTION_PROPERTY, {}).get("select", {}).get("options", [])],
+        "provider_action_status_options": [opt.get("name") for opt in updated_properties.get(PROVIDER_ACTION_STATUS_PROPERTY, {}).get("select", {}).get("options", [])],
+        "mailbox_type": updated_properties.get(MAILBOX_PROPERTY, {}).get("type"),
+        "retention_type": updated_properties.get(RETENTION_PROPERTY, {}).get("type"),
     }, indent=2))
 
 

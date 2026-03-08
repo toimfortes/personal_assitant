@@ -1,0 +1,71 @@
+type,value,notes
+# Important domains - Corporate
+domain,antharistherapeutics.com,Antharis Therapeutics (own company)
+domain,btgpactual.com,BTG Pactual (JKMCVJ / FBO investor rep)
+domain,cittadinoadvogados.com.br,Cittadino Advogados (Halliwell Equities)
+domain,leste.com,Leste Group (Leste Global Fund)
+domain,apsis.com.br,Apsis (Ricardo Monteiro)
+domain,larrainvial.com,LarrainVial (Inversiones Ithaca)
+domain,nbw.group,NBW Co. (Jonathan Horick)
+domain,fuse.capital,Fuse Capital
+domain,cassynibiopharma.com,Cassini Biopharma (Juliano de Souza)
+domain,3r-invest.com.br,3R Invest (Adriano Bernardi)
+domain,channelfinancial.com,Channel Financial (Steve Woodley)
+domain,farosinvest.com.br,Faros Invest (Felipe Bichara)
+domain,bradescobbi.com,Bradesco BBI (Fernando Reitzfeld)
+domain,thrivent.com,Thrivent (Mike Hegarty)
+domain,legacycapitalgroup.com,Legacy Capital Group (Andy Baugh)
+domain,voya.com,Voya Financial (Erik Finwall)
+# Important domains - Legal / Government / Services
+domain,met.police.uk,Metropolitan Police
+domain,cityoflondon.police.uk,City of London Police
+domain,police.uk,UK Police
+domain,gov.uk,UK Government
+domain,mintz.com,Mintz law firm
+domain,evidence.com,Axon evidence platform
+domain,taxadvisorypartnership.com,Tax advisor
+# VIP senders - investors on generic domains
+email,stanchina@gmail.com,Andreas Rahul Stanchina (investor)
+email,dberry27@yahoo.com,Intellijump Partners LLC (investor)
+email,raghav.subbarao@gmail.com,Raghav Subbarao (investor)
+email,jorge.valencia@mac.com,Jorge Valencia de la Cerda (investor)
+email,rcavalheiro5@gmail.com,Rodolfo Cavalheiro (investor)
+email,asad.u.k.munir@gmail.com,Asad Munir (investor)
+email,bobby.vedral@gmail.com,Cristoph Vedral (investor)
+email,bolivardiazleblanc@gmail.com,Bolivar Hernan Diaz Le Blanc (investor)
+email,terrencematthews@me.com,Terrence Wayne Matthews (investor)
+email,edvaldo405@gmail.com,Edvaldo Alves de Melo (investor)
+email,alonso.perez@me.com,Hernan Alonso Perez-Kakabadse (investor)
+email,wagnerguida@gmail.com,Bioinvest SPA (investor)
+email,rimaluf08@gmail.com,Ricardo Maluf (investor)
+email,mabroe@gmail.com,Matthew Abroe (investor)
+email,stephaniejaneallen@gmail.com,Stephanie Allen (investor)
+email,majid.m.sebti@gmail.com,Majid Sebti (investor)
+email,the5hogans@centurylink.net,Mike Hogan (investor)
+email,josephbetlej@gmail.com,Joe Betlej (investor)
+email,fmp.onme@gmail.com,Felipe Mendonca (investor)
+email,mbeckman62@gmail.com,Mike Beckman (investor)
+# VIP senders - other
+email,seffron@mintz.com,Samuel Effron - Mintz law firm
+email,adwoa.antwi-boadu@met.police.uk,Met Police officer
+email,beth.clark@cityoflondon.police.uk,City of London Police officer
+email,pinaudr@gmail.com,Raphael Ribeiro-Pinaud
+# Billing keywords
+bill_keyword,bill,billing
+bill_keyword,billing,billing
+bill_keyword,invoice,billing
+bill_keyword,statement,billing
+bill_keyword,payment due,billing
+bill_keyword,past due,billing
+bill_keyword,autopay,billing
+bill_keyword,utility,billing
+bill_keyword,electric,billing
+bill_keyword,gas,billing
+bill_keyword,water,billing
+bill_keyword,internet,billing
+bill_keyword,phone bill,billing
+bill_keyword,insurance,billing
+bill_keyword,mortgage,billing
+bill_keyword,rent,billing
+bill_keyword,credit card,billing
+bill_keyword,due date,billing

@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-08T18:51:56.901312Z",
+  "phase": "stringent-forensic",
+  "target_path": ".",
+  "findings": [
+    {
+      "id": "FRN-001",
+      "severity": "medium",
+      "category": "patterns",
+      "file": "scripts/repair-outlook-backfill-triage.py",
+      "line": 95,
+      "column": null,
+      "message": "Complex regex heuristic in a safety-critical module path (R83 signal).",
+      "evidence": "text = re.sub(r\"(?is)<(script|style).*?>.*?</\\\\1>\", \" \", value or \"\")",
+      "remediation": "Benchmark deterministic regex vs structured model-based classification and keep rollback criteria.",
+      "rule_id": "R83",
+      "confidence": "medium",
+      "policy_id": "R83",
+      "anchor": null,
+      "symbol_id": null,
+      "node_fingerprint": null,
+      "provenance_kind": "tooling",
+      "alternate_provenance": {
+        "source": "tooling_finding",
+        "artifact_uri": "scripts/repair-outlook-backfill-triage.py",
+        "locator": "scripts/repair-outlook-backfill-triage.py:95",
+        "line": 95,
+        "column": null,
+        "evidence_sha256": "e3e5b2c2bb56811dc2ac57142ea5a2d109e722e6f8589dafd97b719949b54e9e"
+      },
+      "tool_name": null,
+      "tool_version": null,
+      "rule_uri": null
+    }
+  ],
+  "metrics": {
+    "phase_name": "stringent-forensic",
+    "files_scanned": 30,
+    "issues_found": 1,
+    "duration_seconds": 0.05047591699985787,
+    "tool_version": null,
+    "critical_count": 0,
+    "high_count": 0,
+    "medium_count": 1,
+    "low_count": 0,
+    "info_count": 0
+  },
+  "tool_config": {},
+  "warnings": []
+}

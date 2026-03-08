@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://email-master.local/schemas/matter.schema.json",
+  "title": "Matter Memory Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "matter_id",
+    "title",
+    "status",
+    "priority",
+    "owner",
+    "created_at",
+    "updated_at",
+    "summary",
+    "objective",
+    "tasks",
+    "artifacts",
+    "decisions",
+    "next_actions"
+  ],
+  "properties": {
+    "matter_id": {
+      "type": "string",
+      "pattern": "^MTR-[0-9]{4}-[0-9]{3}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "active",
+        "blocked",
+        "done",
+        "archived"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "p0",
+        "p1",
+        "p2",
+        "p3"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 2
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 10
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      },
+      "default": []
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^TASK-[0-9]{3}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 3
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "in_progress",
+              "blocked",
+              "done"
+            ]
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "path",
+          "kind"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 3
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "doc",
+              "workflow",
+              "script",
+              "config",
+              "schema"
+            ]
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision_id",
+          "date",
+          "decision",
+          "rationale"
+        ],
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "pattern": "^DEC-[0-9]{3}$"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 8
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 8
+          }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      },
+      "default": []
+    },
+    "next_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 5
+      }
+    }
+  }
+}

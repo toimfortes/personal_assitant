@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-08T18:51:52.899025Z",
+  "phase": "findings-artifact-quality",
+  "target_path": ".",
+  "findings": [],
+  "metrics": {
+    "phase_name": "findings-artifact-quality",
+    "files_scanned": 0,
+    "issues_found": 0,
+    "duration_seconds": 0.00027777798823080957,
+    "tool_version": null,
+    "critical_count": 0,
+    "high_count": 0,
+    "medium_count": 0,
+    "low_count": 0,
+    "info_count": 0
+  },
+  "tool_config": {},
+  "warnings": [
+    "No findings artifact JSON files discovered under docs/reports."
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "matter_id": "MTR-YYYY-001",
+  "title": "Matter title",
+  "status": "intake",
+  "priority": "p1",
+  "owner": "owner_name",
+  "created_at": "2026-03-04T00:00:00Z",
+  "updated_at": "2026-03-04T00:00:00Z",
+  "summary": "Short summary of what this matter is and why it exists.",
+  "objective": "Concrete measurable objective.",
+  "constraints": [
+    "List non-negotiable constraints"
+  ],
+  "tasks": [
+    {
+      "task_id": "TASK-001",
+      "title": "First task",
+      "status": "todo",
+      "due_date": "2026-03-07"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "Example Artifact",
+      "path": "path/to/file",
+      "kind": "doc"
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "DEC-001",
+      "date": "2026-03-04",
+      "decision": "Decision text",
+      "rationale": "Rationale text"
+    }
+  ],
+  "links": [],
+  "next_actions": [
+    "Add immediate next action"
+  ]
+}

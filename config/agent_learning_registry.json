@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "updated_at": "2026-03-06T00:00:00Z",
+  "policy": {
+    "approval_mode": "human_gated",
+    "human_approval_required": true,
+    "proposal_queue_file": "memory/raw/proposed_learnings.json",
+    "tier_change_queue_file": "memory/raw/pending_tier_changes.json",
+    "usage_events_file": "memory/raw/learning_usage_events.jsonl",
+    "immutable_instruction_files": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "GEMINI.md",
+      "openclaw-configs/AGENTS.md"
+    ],
+    "max_proposals_per_day": 20,
+    "tiers": {
+      "hot": {
+        "always_loaded": true,
+        "max_items": 40
+      },
+      "warm": {
+        "always_loaded": false,
+        "max_items": 200
+      },
+      "cold": {
+        "always_loaded": false,
+        "max_items": 10000
+      }
+    },
+    "promotion_rules": {
+      "warm_to_hot_min_uses_7d": 3,
+      "hot_to_warm_inactive_days": 30,
+      "warm_to_cold_inactive_days": 90
+    },
+    "review_cadence": {
+      "proposal_review": "daily",
+      "tier_review": "weekly"
+    }
+  },
+  "approved_learnings": [
+    {
+      "id": "L-20260306-0001",
+      "title": "Model routing source of truth",
+      "statement": "Use config/model_settings.json for local tool model primary/fallback/backend routing. Do not hardcode model IDs when this config can be used.",
+      "added_on": "2026-03-06",
+      "approved_by": "antoniofortes",
+      "source": "manual",
+      "tier": "hot",
+      "use_count_total": 0,
+      "last_used_at": null
+    },
+    {
+      "id": "L-20260306-0002",
+      "title": "goplaces endpoint hardening",
+      "statement": "Use a pinned goplaces wrapper that blocks base-url overrides and unsets GOOGLE_*_BASE_URL variables unless explicitly enabled for trusted local testing.",
+      "added_on": "2026-03-06",
+      "approved_by": "antoniofortes",
+      "source": "manual",
+      "tier": "hot",
+      "use_count_total": 0,
+      "last_used_at": null
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://email-master.local/schemas/matter-index.schema.json",
+  "title": "Matter Memory Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "updated_at",
+    "matters"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "matters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "matter_id",
+          "title",
+          "status",
+          "priority",
+          "owner",
+          "last_updated",
+          "file"
+        ],
+        "properties": {
+          "matter_id": {
+            "type": "string",
+            "pattern": "^MTR-[0-9]{4}-[0-9]{3}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 3
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "intake",
+              "active",
+              "blocked",
+              "done",
+              "archived"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "p0",
+              "p1",
+              "p2",
+              "p3"
+            ]
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 2
+          },
+          "last_updated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^memory/matters/.+\\.json$"
+          }
+        }
+      }
+    }
+  }
+}

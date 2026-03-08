@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-03-04T21:40:00Z",
+  "matters": [
+    {
+      "matter_id": "MTR-2026-001",
+      "title": "OpenClaw Personal Assistant Foundation",
+      "status": "active",
+      "priority": "p0",
+      "owner": "antoniofortes",
+      "last_updated": "2026-03-04T21:40:00Z",
+      "file": "memory/matters/MTR-2026-001-openclaw-personal-assistant-foundation.json"
+    }
+  ]
+}

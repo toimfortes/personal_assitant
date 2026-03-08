@@ -1,4 +1,4 @@
-# 🚀 Email Master: Start-Up Guide
+# 🚀 Email Master: Start-Up Guide (2026 RTX 3090 Edition)
 
 Follow these steps to get your AI Executive Assistant live and protecting your inbox.
 
@@ -19,18 +19,15 @@ Create a new **Database** in Notion and add these exact properties:
 
 ## Phase 2: n8n Workflow Import
 1.  **Open n8n:** Go to `http://localhost:5678`.
-2.  **Import Triage:** Go to **Workflows > Import from File** and select `n8n-workflows/triage-outlook-to-notion.json`.
-    - **Connect Outlook:** Click the "Microsoft 365 Email" node and add your credentials.
-    - **Connect OpenAI:** Click the "AI Triage" node and add your OpenAI credential.
-    - **Connect Notion:** Click the "Add to Notion" node and select your new database.
-3.  **Import Nag:** Repeat for `n8n-workflows/daily-investor-nag.json`.
+2.  **Import Triage:** Import `n8n-workflows/triage-outlook-to-notion.json`.
+3.  **Import Nag:** Import `n8n-workflows/daily-investor-nag.json`.
 
 ---
 
 ## Phase 3: OpenClaw (Moltbot) Persona
 1.  **Open OpenClaw UI:** Go to `http://localhost:18789`.
-2.  **Configure Agent:** Copy the content of `openclaw-configs/AGENTS.md` into your agent's system prompt or `AGENTS.md` file.
-3.  **Enable Outlook Skill:** Ensure the `outlook-skill` is installed so the agent can draft replies.
+2.  **Configure Agent:** Copy `openclaw-configs/AGENTS.md` into your agent's persona.
+3.  **Enable Outlook Skill:** Ensure the `outlook-skill` is installed.
 
 ---
 
@@ -38,7 +35,7 @@ Create a new **Database** in Notion and add these exact properties:
 Open your terminal in the project directory and run:
 
 ```bash
-# 1. Initialize folders and .env (already populated with your keys)
+# 1. Initialize folders and .env
 chmod +x docker-setup.sh verify-stack.sh
 ./docker-setup.sh
 
@@ -49,17 +46,22 @@ docker compose up -d
 ./verify-stack.sh
 ```
 
-If you previously used a host folder at `./ollama_data`, you can archive or remove it after confirming you no longer need that local model cache. The stack now uses a named Docker volume for Ollama state.
-
 ---
 
-## Phase 5: Connecting the "Nag" Overlay
-To see the proactive reminders on your screen:
-1.  Open your **OpenClaw Desktop App** (Moltbot overlay).
-2.  Go to **Settings > Gateway** and choose **"Custom Gateway"**.
-3.  Set URL to: `http://localhost:18789`.
-4.  Get your token: `docker exec email-master-openclaw openclaw token`.
-5.  Paste the token into the Desktop App.
+## Phase 5: Local Models (Ollama for 3090)
+The system is optimized for your **RTX 3090 (24GB VRAM)**. 
+
+### 1. Pull the 2026 Recommended Stack:
+```bash
+# Optimal reasoning brain for 3090 (27B Dense)
+docker exec -it email-master-ollama ollama pull qwen3.5:27b
+
+# Fast reasoning & tool-use expert (30B Flash)
+docker exec -it email-master-ollama ollama pull glm-4.7-flash
+
+# Background triage specialist
+docker exec -it email-master-ollama ollama pull llama3.1:8b
+```
 
 ---
 

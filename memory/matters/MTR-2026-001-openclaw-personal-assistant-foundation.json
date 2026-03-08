@@ -1,0 +1,94 @@
+{
+  "matter_id": "MTR-2026-001",
+  "title": "OpenClaw Personal Assistant Foundation",
+  "status": "active",
+  "priority": "p0",
+  "owner": "antoniofortes",
+  "created_at": "2026-03-04T12:00:00Z",
+  "updated_at": "2026-03-04T21:40:00Z",
+  "summary": "Build a secure, cost-controlled, multi-agent OpenClaw personal assistant with enforceable contracts.",
+  "objective": "Turn this repository into a production-ready personal assistant platform with schema governance and predictable growth.",
+  "constraints": [
+    "All high-risk actions require explicit approval",
+    "Repository memory must stay structured and compact",
+    "Function behavior must be registered before automation changes"
+  ],
+  "tasks": [
+    {
+      "task_id": "TASK-001",
+      "title": "Harden gateway and tool execution boundaries",
+      "status": "todo",
+      "due_date": "2026-03-07"
+    },
+    {
+      "task_id": "TASK-002",
+      "title": "Implement cost controls and heartbeat quiet hours",
+      "status": "todo",
+      "due_date": "2026-03-08"
+    },
+    {
+      "task_id": "TASK-003",
+      "title": "Define multi-agent bindings and sub-agent policy",
+      "status": "todo",
+      "due_date": "2026-03-10"
+    },
+    {
+      "task_id": "TASK-004",
+      "title": "Enforce manual approval on all send-capable email workflows",
+      "status": "done",
+      "due_date": "2026-03-05"
+    },
+    {
+      "task_id": "TASK-005",
+      "title": "Deploy Notion approval-gated Gmail send flow",
+      "status": "in_progress",
+      "due_date": "2026-03-05"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "Function Registry",
+      "path": "contracts/function-registry.json",
+      "kind": "schema"
+    },
+    {
+      "name": "Matter Index",
+      "path": "memory/matter-index.json",
+      "kind": "doc"
+    },
+    {
+      "name": "Smoke Test",
+      "path": "scripts/smoke-test.sh",
+      "kind": "script"
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "DEC-001",
+      "date": "2026-03-04",
+      "decision": "Adopt structured matter memory with strict JSON schema contracts.",
+      "rationale": "Prevents ad hoc growth and keeps automation safe and auditable."
+    },
+    {
+      "decision_id": "DEC-002",
+      "date": "2026-03-04",
+      "decision": "Require manual approval for outbound email actions and block auto-send patterns by policy.",
+      "rationale": "Mitigates prompt injection and prevents irreversible actions without operator confirmation."
+    },
+    {
+      "decision_id": "DEC-003",
+      "date": "2026-03-04",
+      "decision": "Allow only explicitly named approval-gated send workflows that require Notion 'Approved to Send' state.",
+      "rationale": "Supports controlled automation after explicit human approval while preserving default deny behavior."
+    }
+  ],
+  "links": [
+    "README.md",
+    "START_UP.md"
+  ],
+  "next_actions": [
+    "Run scripts/governance-check.sh before every commit",
+    "Update function registry for each new workflow function",
+    "Create a new matter file for each major initiative"
+  ]
+}

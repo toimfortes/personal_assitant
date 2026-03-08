@@ -1,0 +1,394 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-03-04T21:40:00Z",
+  "functions": [
+    {
+      "function_id": "triage_outlook_email",
+      "version": "1.0.0",
+      "name": "Triage Outlook Email",
+      "description": "Classifies unread Outlook email for investor-critical importance and extracts summary/action fields.",
+      "risk_level": "medium",
+      "approval_required": false,
+      "implemented_by": {
+        "type": "n8n-workflow",
+        "ref": "n8n-workflows/triage-outlook-to-notion.json"
+      },
+      "side_effects": [
+        "Reads inbound Outlook email content"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "subject",
+          "body",
+          "from",
+          "webLink"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "webLink": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "is_important",
+          "summary",
+          "suggested_action"
+        ],
+        "properties": {
+          "is_important": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "suggested_action": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "function_id": "triage_gmail_email",
+      "version": "1.0.0",
+      "name": "Triage Gmail Email",
+      "description": "Classifies unread Gmail messages for investor-critical importance and extracts summary/action fields.",
+      "risk_level": "medium",
+      "approval_required": false,
+      "implemented_by": {
+        "type": "n8n-workflow",
+        "ref": "n8n-workflows/triage-gmail-to-notion.json"
+      },
+      "side_effects": [
+        "Reads inbound Gmail message content"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "subject",
+          "from",
+          "snippet",
+          "id"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "is_important",
+          "summary",
+          "suggested_action"
+        ],
+        "properties": {
+          "is_important": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "suggested_action": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "function_id": "create_notion_investor_task",
+      "version": "1.0.0",
+      "name": "Create Notion Investor Task",
+      "description": "Creates a Notion task row for important investor-related email follow-up.",
+      "risk_level": "medium",
+      "approval_required": false,
+      "implemented_by": {
+        "type": "n8n-workflow",
+        "ref": "n8n-workflows/triage-outlook-to-notion.json"
+      },
+      "side_effects": [
+        "Writes to Notion database"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "title",
+          "sender",
+          "core_request",
+          "status",
+          "original_link"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "sender": {
+            "type": "string"
+          },
+          "core_request": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "original_link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "notion_page_id"
+        ],
+        "properties": {
+          "notion_page_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "function_id": "manual_send_gmail_message",
+      "version": "1.0.0",
+      "name": "Manual Send Gmail Message",
+      "description": "Sends Gmail messages only from explicitly human-triggered workflow execution.",
+      "risk_level": "high",
+      "approval_required": true,
+      "implemented_by": {
+        "type": "n8n-workflow",
+        "ref": "n8n-workflows/manual-gmail-reply-manual-approval.json"
+      },
+      "side_effects": [
+        "Sends outbound Gmail message"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "sendTo",
+          "subject",
+          "message"
+        ],
+        "properties": {
+          "sendTo": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "id",
+          "threadId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "function_id": "send_approved_gmail_from_notion",
+      "version": "1.0.0",
+      "name": "Send Approved Gmail From Notion",
+      "description": "Polls Notion for items with Status=Approved to Send, sends Gmail reply, and marks item Status=Sent.",
+      "risk_level": "high",
+      "approval_required": true,
+      "implemented_by": {
+        "type": "n8n-workflow",
+        "ref": "n8n-workflows/notion-approved-gmail-send-approval-gated.json"
+      },
+      "side_effects": [
+        "Reads Notion task records",
+        "Sends outbound Gmail message",
+        "Updates Notion status to Sent"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "Status",
+          "Sender",
+          "Reply Draft"
+        ],
+        "properties": {
+          "Status": {
+            "type": "string"
+          },
+          "Sender": {
+            "type": "string"
+          },
+          "Reply Draft": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "recipient",
+          "subject"
+        ],
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "function_id": "find_unfinished_investor_tasks",
+      "version": "1.0.0",
+      "name": "Find Unfinished Investor Tasks",
+      "description": "Queries Notion for pending investor tasks used by periodic nag automation.",
+      "risk_level": "low",
+      "approval_required": false,
+      "implemented_by": {
+        "type": "n8n-workflow",
+        "ref": "n8n-workflows/daily-investor-nag.json"
+      },
+      "side_effects": [
+        "Reads Notion database entries"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "databaseId",
+          "filters"
+        ],
+        "properties": {
+          "databaseId": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "tasks"
+        ],
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "function_id": "trigger_openclaw_overlay",
+      "version": "1.0.0",
+      "name": "Trigger OpenClaw Overlay",
+      "description": "Sends authenticated hook payload to OpenClaw /hooks/agent for proactive overlay notifications.",
+      "risk_level": "high",
+      "approval_required": true,
+      "implemented_by": {
+        "type": "openclaw-hook",
+        "ref": "contracts/examples/openclaw-hook-agent.sample.json"
+      },
+      "side_effects": [
+        "Wakes OpenClaw agent immediately",
+        "Can generate outbound assistant prompts"
+      ],
+      "inputs": {
+        "type": "object",
+        "required": [
+          "name",
+          "agentId",
+          "wakeMode",
+          "deliver",
+          "message"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "wakeMode": {
+            "type": "string"
+          },
+          "deliver": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs": {
+        "type": "object",
+        "required": [
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

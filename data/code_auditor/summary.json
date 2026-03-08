@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-08T18:51:52.897066Z",
+  "project_root": ".",
+  "phases_completed": [
+    "preflight",
+    "toolchain",
+    "findings-artifact-quality",
+    "patterns",
+    "lint",
+    "types",
+    "tests",
+    "security",
+    "dead-code",
+    "complexity",
+    "stringent-forensic",
+    "policy",
+    "tracing"
+  ],
+  "phases_failed": [],
+  "phases_skipped": [],
+  "total_files_scanned": 42,
+  "total_findings": 48,
+  "total_duration_seconds": 4.4619685549114365,
+  "total_critical": 0,
+  "total_high": 46,
+  "total_medium": 1,
+  "total_low": 1,
+  "total_info": 0,
+  "phase_summaries": {
+    "preflight": {
+      "files_scanned": 6,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.00006500197923742235
+    },
+    "toolchain": {
+      "files_scanned": 6,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.0
+    },
+    "findings-artifact-quality": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.00027777798823080957
+    },
+    "patterns": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.01740928800427355
+    },
+    "lint": {
+      "files_scanned": 0,
+      "findings": 1,
+      "critical": 0,
+      "high": 1,
+      "medium": 0,
+      "duration_seconds": 0.047449977981159464
+    },
+    "types": {
+      "files_scanned": 0,
+      "findings": 35,
+      "critical": 0,
+      "high": 35,
+      "medium": 0,
+      "duration_seconds": 2.6189488919917494
+    },
+    "tests": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.24140895999153145
+    },
+    "security": {
+      "files_scanned": 0,
+      "findings": 10,
+      "critical": 0,
+      "high": 10,
+      "medium": 0,
+      "duration_seconds": 0.4228964709909633
+    },
+    "dead-code": {
+      "files_scanned": 0,
+      "findings": 1,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.10944338398985565
+    },
+    "complexity": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.541739284992218
+    },
+    "stringent-forensic": {
+      "files_scanned": 30,
+      "findings": 1,
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "duration_seconds": 0.05047591699985787
+    },
+    "policy": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 0.4118519699841272
+    },
+    "tracing": {
+      "files_scanned": 0,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "duration_seconds": 1.6300182323902845e-6
+    }
+  },
+  "ci_pass": false,
+  "ci_fail_reason": "Critical/high issues found in lint"
+}

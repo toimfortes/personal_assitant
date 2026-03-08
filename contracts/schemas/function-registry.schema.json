@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://email-master.local/schemas/function-registry.schema.json",
+  "title": "Function Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generated_at",
+    "functions"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "functions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/functionContract"
+      }
+    }
+  },
+  "$defs": {
+    "jsonSchemaObject": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "properties": {
+          "type": "object",
+          "default": {}
+        },
+        "additionalProperties": {
+          "type": [
+            "boolean",
+            "object"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "functionContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "function_id",
+        "version",
+        "name",
+        "description",
+        "risk_level",
+        "approval_required",
+        "implemented_by",
+        "inputs",
+        "outputs"
+      ],
+      "properties": {
+        "function_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 3
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "approval_required": {
+          "type": "boolean"
+        },
+        "implemented_by": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "ref"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "n8n-workflow",
+                "openclaw-hook",
+                "openclaw-agent",
+                "script"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 3
+            }
+          }
+        },
+        "side_effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "inputs": {
+          "$ref": "#/$defs/jsonSchemaObject"
+        },
+        "outputs": {
+          "$ref": "#/$defs/jsonSchemaObject"
+        }
+      }
+    }
+  }
+}

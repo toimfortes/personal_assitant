@@ -1,0 +1,24 @@
+{
+  "llm": {
+    "backend": "openclaw",
+    "primary": "google-gemini-cli/gemini-3-flash-preview",
+    "fallbacks": [
+      "anthropic/claude-haiku-4-5-20251001",
+      "openai-codex/gpt-5.3-codex",
+      "ollama/glm-4.7-flash"
+    ],
+    "timeout_seconds": 120
+  },
+  "openclaw": {
+    "gateway_container": "email-master-openclaw-gateway",
+    "agent_id": "main",
+    "sync_model_routing": true,
+    "restart_gateway_on_sync": false
+  },
+  "ocr": {
+    "language": "fra+eng",
+    "pdf_dpi": 220,
+    "min_text_chars": 80,
+    "max_context_chars": 12000
+  }
+}

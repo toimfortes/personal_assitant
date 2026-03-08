@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://email-master.local/schemas/openclaw-hook-agent.schema.json",
+  "title": "OpenClaw Hook Agent Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "message"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 3
+    },
+    "agentId": {
+      "type": "string",
+      "minLength": 1,
+      "default": "main"
+    },
+    "wakeMode": {
+      "type": "string",
+      "enum": [
+        "now",
+        "next-heartbeat"
+      ],
+      "default": "now"
+    },
+    "deliver": {
+      "type": "boolean",
+      "default": false
+    },
+    "message": {
+      "type": "string",
+      "minLength": 8
+    },
+    "sessionKey": {
+      "type": "string",
+      "minLength": 3
+    }
+  }
+}

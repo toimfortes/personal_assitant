@@ -1,0 +1,37 @@
+name: Code Auditor
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install codeauditor toolchain
+        run: |
+          python -m pip install --upgrade pip
+          if [ -n "${CODE_AUDITOR_INSTALL_CMD:-}" ]; then
+            eval "${CODE_AUDITOR_INSTALL_CMD}"
+          elif [ -f "../code_auditor/pyproject.toml" ]; then
+            python -m pip install -e "../code_auditor[dev]"
+          else
+            python -m pip install "code-auditor[dev]"
+          fi
+          command -v codeauditor
+          codeauditor --help >/dev/null
+
+      - name: Run full audit (CI gate)
+        run: |
+          ./scripts/run-codeauditor.sh --ci
