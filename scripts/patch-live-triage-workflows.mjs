@@ -121,27 +121,46 @@ function patchWorkflow(workflow) {
   return changed;
 }
 
+function activeVersionNeedsRefresh(workflow) {
+  if (!workflow.active || !workflow.activeVersion?.nodes) return false;
+  const draft = JSON.parse(JSON.stringify({ nodes: workflow.activeVersion.nodes }));
+  return patchWorkflow(draft);
+}
+
 async function updateWorkflow(cookie, workflow) {
   const changed = patchWorkflow(workflow);
-  if (!changed) {
-    return { id: workflow.id, name: workflow.name, changed: false };
+  const needsRepublish = changed || activeVersionNeedsRefresh(workflow);
+
+  if (changed) {
+    const payload = {
+      nodes: workflow.nodes,
+      connections: workflow.connections,
+    };
+
+    await jsonFetch(`${N8N_URL}/rest/workflows/${workflow.id}`, {
+      method: "PATCH",
+      headers: {
+        Cookie: cookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
   }
 
-  const payload = {
-    nodes: workflow.nodes,
-    connections: workflow.connections,
-  };
+  let republished = false;
+  if (workflow.active && needsRepublish) {
+    await jsonFetch(`${N8N_URL}/rest/workflows/${workflow.id}/activate`, {
+      method: "POST",
+      headers: {
+        Cookie: cookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ versionId: workflow.versionId }),
+    });
+    republished = true;
+  }
 
-  await jsonFetch(`${N8N_URL}/rest/workflows/${workflow.id}`, {
-    method: "PATCH",
-    headers: {
-      Cookie: cookie,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  return { id: workflow.id, name: workflow.name, changed: true };
+  return { id: workflow.id, name: workflow.name, changed, republished };
 }
 
 async function main() {
@@ -158,12 +177,13 @@ async function main() {
     results.push(await updateWorkflow(cookie, workflowPayload.data));
   }
 
-  const changed = results.filter((entry) => entry.changed);
+  const touched = results.filter((entry) => entry.changed || entry.republished);
   console.log(JSON.stringify({
     llmBridgeUrl: LLM_BRIDGE_URL,
     primaryModel: PRIMARY_MODEL,
-    patched: changed.length,
-    workflows: changed,
+    patched: results.filter((entry) => entry.changed).length,
+    republished: results.filter((entry) => entry.republished).length,
+    workflows: touched,
   }, null, 2));
 }
 

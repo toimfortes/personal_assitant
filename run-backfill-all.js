@@ -1,8 +1,5 @@
 const puppeteer = require('puppeteer');
-
-const N8N_URL = 'http://localhost:5678';
-const N8N_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZTRkZTAyMy1mMGMzLTRlODAtOThlYi04ZmRkOGE1MTdjYjMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYWNiZjI5MDMtNTVkMy00MTQ0LWE2ZjQtZTgyN2E1ZDFmNzliIiwiaWF0IjoxNzcyNzI3MjY5LCJleHAiOjE3NzUyNjA4MDB9.XrePb6rP8yypF-roL4kRGjVQhj8Um6VEJ9SS8pINgqM';
-const AUTH_COOKIE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZlNGRlMDIzLWYwYzMtNGU4MC05OGViLThmZGQ4YTUxN2NiMyIsImhhc2giOiIwZngxR0JhV0liIiwidXNlZE1mYSI6ZmFsc2UsImlhdCI6MTc3Mjc1NjQzNywiZXhwIjoxNzczMzYxMjM3fQ.9bw_wGwJl-rJinSMC7jb7t5O8LXEfWx-t14FAOMrenA';
+const { N8N_URL, getCookie, loginPage, findExecuteButton, listExecutions, fetchExecution } = require('./scripts/n8n-script-config.cjs');
 const WF_ID = 'FgXJ0dTlOibbKHr0';
 
 const ACCOUNTS = [
@@ -14,9 +11,10 @@ const ACCOUNTS = [
 ];
 
 async function restCall(method, path, body) {
+  const cookie = await getCookie();
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json', 'Cookie': `n8n-auth=${AUTH_COOKIE}` },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
   };
   if (body) opts.body = JSON.stringify(body);
   const resp = await fetch(`${N8N_URL}${path}`, opts);
@@ -25,10 +23,15 @@ async function restCall(method, path, body) {
 }
 
 async function apiCall(path) {
-  const resp = await fetch(`${N8N_URL}${path}`, {
-    headers: { 'X-N8N-API-KEY': N8N_API_KEY },
-  });
-  return resp.json();
+  const cookie = await getCookie();
+  if (path.startsWith('/api/v1/executions?')) {
+    return { data: await listExecutions(cookie, WF_ID, 20) };
+  }
+  const match = path.match(/^\/api\/v1\/executions\/(\d+)(\?includeData=true)?$/);
+  if (match) {
+    return await fetchExecution(cookie, match[1], Boolean(match[2]));
+  }
+  throw new Error(`Unsupported helper API path: ${path}`);
 }
 
 async function patchCredential(credId, credName) {
@@ -46,25 +49,12 @@ async function patchCredential(credId, credName) {
 }
 
 (async () => {
+  const cookie = await getCookie();
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
   page.setDefaultTimeout(30000);
 
-  // Login
-  await page.goto(`${N8N_URL}/signin`, { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 2000));
-  const ei = await page.$('input[autocomplete="email"], input[type="email"]');
-  const pi = await page.$('input[type="password"]');
-  if (ei && pi) {
-    await ei.click({ clickCount: 3 }); await ei.type('cortexcerebral@gmail.com');
-    await pi.click({ clickCount: 3 }); await pi.type('Hjkhjk.,23');
-    for (const btn of await page.$$('button')) {
-      if ((await page.evaluate(el => el.textContent, btn)).toLowerCase().includes('sign in')) {
-        await btn.click(); break;
-      }
-    }
-    await new Promise(r => setTimeout(r, 3000));
-  }
+  await loginPage(page);
   console.log('Logged in\n');
 
   const allResults = [];
@@ -79,13 +69,12 @@ async function patchCredential(credId, credName) {
     await patchCredential(acct.id, acct.name);
 
     // Get last exec ID
-    const before = await apiCall(`/api/v1/executions?workflowId=${WF_ID}&limit=1`);
-    const lastId = parseInt(before.data?.[0]?.id || '0');
+    const lastId = parseInt((await listExecutions(cookie, WF_ID, 20))[0]?.id || '0');
 
     // Navigate and execute
     await page.goto(`${N8N_URL}/workflow/${WF_ID}`, { waitUntil: 'networkidle2' });
     await new Promise(r => setTimeout(r, 3000));
-    const execBtn = await page.$('[data-test-id="execute-workflow-button"]');
+    const execBtn = await findExecuteButton(page);
     if (execBtn) {
       await execBtn.click();
       console.log(`  Triggered at ${new Date().toLocaleTimeString()}`);
@@ -98,14 +87,13 @@ async function patchCredential(credId, credName) {
     let result = null;
     for (let i = 0; i < 3600; i++) {
       await new Promise(r => setTimeout(r, 2000));
-      const list = await apiCall(`/api/v1/executions?workflowId=${WF_ID}&limit=1`);
-      const latest = list.data?.[0];
+      const latest = (await listExecutions(cookie, WF_ID, 20))[0];
       if (latest && parseInt(latest.id) > lastId && !['running', 'new', 'waiting'].includes(latest.status)) {
         const elapsed = Math.round((Date.now() - startTime) / 1000);
         console.log(`  Completed in ${elapsed}s (status: ${latest.status})`);
 
-        const detail = await apiCall(`/api/v1/executions/${latest.id}?includeData=true`);
-        const rd = detail.data?.resultData?.runData || {};
+        const detail = await fetchExecution(cookie, latest.id, true);
+        const rd = detail.resultData?.runData || {};
 
         // Count emails fetched
         const gmailRuns = rd['Gmail Get All'] || [];
@@ -215,7 +203,7 @@ async function patchCredential(credId, credName) {
   }
 
   // Restore to account 1
-  await patchCredential('jACGwijQXj0rEYqR', 'Gmail account 1');
+  await patchCredential('0YJAOX0ZGvKDcpAt', 'Gmail account 1');
 
   console.log(`\n\n${'='.repeat(60)}`);
   console.log('SUMMARY');

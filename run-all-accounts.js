@@ -1,6 +1,5 @@
 const puppeteer = require("puppeteer");
-const N8N_URL = "http://localhost:5678";
-const N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZTRkZTAyMy1mMGMzLTRlODAtOThlYi04ZmRkOGE1MTdjYjMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYWNiZjI5MDMtNTVkMy00MTQ0LWE2ZjQtZTgyN2E1ZDFmNzliIiwiaWF0IjoxNzcyNzI3MjY5LCJleHAiOjE3NzUyNjA4MDB9.XrePb6rP8yypF-roL4kRGjVQhj8Um6VEJ9SS8pINgqM";
+const { N8N_URL, getCookie, loginPage, findExecuteButton, listExecutions, fetchExecution } = require("./scripts/n8n-script-config.cjs");
 const WF_ID = "FgXJ0dTlOibbKHr0";
 
 const ACCOUNTS = [
@@ -11,15 +10,6 @@ const ACCOUNTS = [
   { id: "Xhbgajo1Ghik9Uf8", name: "Gmail account 5", email: "antonioforteslegal@gmail.com" },
   // Account 6 (toimusa) already done
 ];
-
-async function getCookie() {
-  const loginResp = await fetch(`${N8N_URL}/rest/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ emailOrLdapLoginId: "cortexcerebral@gmail.com", password: "Hjkhjk.,23" }),
-  });
-  return loginResp.headers.getSetCookie()?.find((c) => c.startsWith("n8n-auth="))?.split(";")[0] || "";
-}
 
 async function patchCredential(cookie, credId, credName) {
   const wfResp = await fetch(`${N8N_URL}/rest/workflows/${WF_ID}`, { headers: { Cookie: cookie } });
@@ -45,21 +35,7 @@ async function patchCredential(cookie, credId, credName) {
   const page = await browser.newPage();
   page.setDefaultTimeout(30000);
 
-  // Login
-  await page.goto(`${N8N_URL}/signin`, { waitUntil: "networkidle2" });
-  await new Promise((r) => setTimeout(r, 2000));
-  const ei = await page.$('input[autocomplete="email"], input[type="email"]');
-  const pi = await page.$('input[type="password"]');
-  if (ei && pi) {
-    await ei.click({ clickCount: 3 }); await ei.type("cortexcerebral@gmail.com");
-    await pi.click({ clickCount: 3 }); await pi.type("Hjkhjk.,23");
-    for (const btn of await page.$$("button")) {
-      if ((await page.evaluate((el) => el.textContent, btn)).toLowerCase().includes("sign in")) {
-        await btn.click(); break;
-      }
-    }
-    await new Promise((r) => setTimeout(r, 3000));
-  }
+  await loginPage(page);
   console.log("Logged in\n");
 
   const allResults = [];
@@ -72,14 +48,11 @@ async function patchCredential(cookie, credId, credName) {
 
     await patchCredential(cookie, acct.id, acct.name);
 
-    const beforeResp = await fetch(`${N8N_URL}/api/v1/executions?workflowId=${WF_ID}&limit=1`, {
-      headers: { "X-N8N-API-KEY": N8N_API_KEY },
-    });
-    const lastId = parseInt((await beforeResp.json()).data?.[0]?.id || "0");
+    const lastId = parseInt((await listExecutions(cookie, WF_ID, 20))[0]?.id || "0");
 
     await page.goto(`${N8N_URL}/workflow/${WF_ID}`, { waitUntil: "networkidle2" });
     await new Promise((r) => setTimeout(r, 3000));
-    const execBtn = await page.$('[data-test-id="execute-workflow-button"]');
+    const execBtn = await findExecuteButton(page);
     if (execBtn) {
       await execBtn.click();
       console.log(`  Triggered at ${new Date().toLocaleTimeString()}`);
@@ -92,19 +65,13 @@ async function patchCredential(cookie, credId, credName) {
     let result = null;
     for (let i = 0; i < 300; i++) {
       await new Promise((r) => setTimeout(r, 2000));
-      const resp = await fetch(`${N8N_URL}/api/v1/executions?workflowId=${WF_ID}&limit=1`, {
-        headers: { "X-N8N-API-KEY": N8N_API_KEY },
-      });
-      const latest = (await resp.json()).data?.[0];
+      const latest = (await listExecutions(cookie, WF_ID, 20))[0];
       if (latest && parseInt(latest.id) > lastId && !["running", "new", "waiting"].includes(latest.status)) {
         const elapsed = Math.round((Date.now() - startTime) / 1000);
         console.log(`  Completed in ${elapsed}s (status: ${latest.status})`);
 
-        const detResp = await fetch(`${N8N_URL}/api/v1/executions/${latest.id}?includeData=true`, {
-          headers: { "X-N8N-API-KEY": N8N_API_KEY },
-        });
-        const det = await detResp.json();
-        const rd = det.data?.resultData?.runData || {};
+        const det = await fetchExecution(cookie, latest.id, true);
+        const rd = det.resultData?.runData || {};
 
         // Count emails
         const gmailRuns = rd["Gmail Get All"] || [];
@@ -173,7 +140,7 @@ async function patchCredential(cookie, credId, credName) {
   }
 
   // Restore to account 1
-  await patchCredential(cookie, "jACGwijQXj0rEYqR", "Gmail account 1");
+  await patchCredential(cookie, "0YJAOX0ZGvKDcpAt", "Gmail account 1");
 
   console.log(`\n${"=".repeat(60)}`);
   console.log("SUMMARY");

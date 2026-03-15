@@ -1,10 +1,6 @@
 const puppeteer = require('puppeteer');
+const { N8N_URL, N8N_EMAIL, N8N_PASSWORD, getCookie, loginPage, findExecuteButton, listExecutions, fetchExecution } = require('./scripts/n8n-script-config.cjs');
 
-const N8N_URL = 'http://localhost:5678';
-const EMAIL = 'cortexcerebral@gmail.com';
-const PASSWORD = 'Hjkhjk.,23';
-const AUTH_COOKIE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZlNGRlMDIzLWYwYzMtNGU4MC05OGViLThmZGQ4YTUxN2NiMyIsImhhc2giOiIwZngxR0JhV0liIiwidXNlZE1mYSI6ZmFsc2UsImlhdCI6MTc3Mjc1NjQzNywiZXhwIjoxNzczMzYxMjM3fQ.9bw_wGwJl-rJinSMC7jb7t5O8LXEfWx-t14FAOMrenA';
-const N8N_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZTRkZTAyMy1mMGMzLTRlODAtOThlYi04ZmRkOGE1MTdjYjMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYWNiZjI5MDMtNTVkMy00MTQ0LWE2ZjQtZTgyN2E1ZDFmNzliIiwiaWF0IjoxNzcyNzI3MjY5LCJleHAiOjE3NzUyNjA4MDB9.XrePb6rP8yypF-roL4kRGjVQhj8Um6VEJ9SS8pINgqM';
 const BACKFILL_WF_ID = 'FgXJ0dTlOibbKHr0';
 
 const CREDS = [
@@ -17,11 +13,12 @@ const CREDS = [
 ];
 
 async function restCall(method, path, body) {
+  const cookie = await getCookie();
   const opts = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'Cookie': `n8n-auth=${AUTH_COOKIE}`,
+      Cookie: cookie,
     },
   };
   if (body) opts.body = JSON.stringify(body);
@@ -31,11 +28,15 @@ async function restCall(method, path, body) {
 }
 
 async function apiCall(method, path) {
-  const resp = await fetch(`${N8N_URL}${path}`, {
-    method,
-    headers: { 'X-N8N-API-KEY': N8N_API_KEY },
-  });
-  return resp.json();
+  const cookie = await getCookie();
+  if (path.startsWith(`/api/v1/executions?workflowId=${BACKFILL_WF_ID}`)) {
+    return { data: await listExecutions(cookie, BACKFILL_WF_ID, 20) };
+  }
+  const match = path.match(/^\/api\/v1\/executions\/(\d+)(\?includeData=true)?$/);
+  if (match) {
+    return await fetchExecution(cookie, match[1], Boolean(match[2]));
+  }
+  throw new Error(`Unsupported helper API path: ${path}`);
 }
 
 (async () => {
@@ -64,23 +65,7 @@ async function apiCall(method, path) {
   const page = await browser.newPage();
   page.setDefaultTimeout(30000);
 
-  // Login
-  await page.goto(`${N8N_URL}/signin`, { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 2000));
-  const emailInput = await page.$('input[autocomplete="email"], input[type="email"]');
-  const passInput = await page.$('input[type="password"]');
-  if (emailInput && passInput) {
-    await emailInput.click({ clickCount: 3 });
-    await emailInput.type(EMAIL);
-    await passInput.click({ clickCount: 3 });
-    await passInput.type(PASSWORD);
-    const buttons = await page.$$('button');
-    for (const btn of buttons) {
-      const text = await page.evaluate(el => el.textContent, btn);
-      if (text.toLowerCase().includes('sign in')) { await btn.click(); break; }
-    }
-    await new Promise(r => setTimeout(r, 3000));
-  }
+  await loginPage(page);
   console.log('Logged in\n');
 
   for (const cred of CREDS) {
@@ -112,7 +97,7 @@ async function apiCall(method, path) {
     for (const btn of closeButtons) { try { await btn.click(); } catch(e) {} }
     await new Promise(r => setTimeout(r, 500));
 
-    const execBtn = await page.$('[data-test-id="execute-workflow-button"]');
+    const execBtn = await findExecuteButton(page);
     if (execBtn) {
       await execBtn.click();
       console.log('  Triggered execution...');
@@ -130,7 +115,7 @@ async function apiCall(method, path) {
       if (latest && latest.id > lastExecId && latest.status !== 'running' && latest.status !== 'new') {
         // Get detailed data
         const detail = await apiCall('GET', `/api/v1/executions/${latest.id}?includeData=true`);
-        const rd = detail.data?.resultData?.runData || {};
+        const rd = detail.resultData?.runData || {};
         const gmailRuns = rd['Gmail Get All'] || [];
 
         for (const run of gmailRuns) {
