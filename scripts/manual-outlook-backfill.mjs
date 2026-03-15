@@ -87,17 +87,15 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function pickOllamaModel() {
+function pickPrimaryModel() {
   try {
     const settings = JSON.parse(readFileSync(MODEL_SETTINGS_PATH, "utf8"));
     const llm = settings?.llm || {};
-    const candidates = [llm.primary, ...(llm.fallbacks || [])].filter(Boolean);
-    const ollama = candidates.find((model) => String(model).startsWith("ollama/"));
-    if (ollama) return String(ollama).replace(/^ollama\//, "");
+    if (llm.primary) return String(llm.primary);
   } catch {
     // Fall back below.
   }
-  return "glm-4.7-flash";
+  return "google-gemini-cli/gemini-3-flash-preview";
 }
 
 function buildFetchNode(templateNode, credentials, opts) {
@@ -316,7 +314,7 @@ return $input.all().map((item) => {
 }
 
 function buildAiNode(templateNode) {
-  const model = pickOllamaModel();
+  const model = pickPrimaryModel();
   return {
     ...templateNode,
     type: "n8n-nodes-base.httpRequest",
@@ -324,7 +322,7 @@ function buildAiNode(templateNode) {
     continueOnFail: true,
     parameters: {
       method: "POST",
-      url: "http://ollama:11434/api/generate",
+      url: "http://llm-bridge:11435/api/generate",
       sendHeaders: true,
       headerParameters: {
         parameters: [{ name: "Content-Type", value: "application/json" }],

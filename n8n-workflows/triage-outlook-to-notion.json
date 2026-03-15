@@ -38,7 +38,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://ollama:11434/api/generate",
+        "url": "http://llm-bridge:11435/api/generate",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -53,7 +53,7 @@
           "parameters": [
             {
               "name": "model",
-              "value": "={{$env[\"N8N_OLLAMA_MODEL_PRIMARY\"] || $env[\"N8N_OLLAMA_MODEL_FALLBACK\"] || \"glm-4.7-flash\"}}"
+              "value": "google-gemini-cli/gemini-3-flash-preview"
             },
             {
               "name": "stream",

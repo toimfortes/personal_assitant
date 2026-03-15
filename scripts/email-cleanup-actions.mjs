@@ -28,7 +28,7 @@ const RULES_FILE = join(PROJECT_ROOT, "config", "triage_rules.csv");
 const N8N_URL = process.env.N8N_URL || "http://localhost:5678";
 
 const ACCOUNTS = {
-  "cortexcerebral@gmail.com": { id: "jACGwijQXj0rEYqR", name: "Gmail account 1" },
+  "cortexcerebral@gmail.com": { id: "0YJAOX0ZGvKDcpAt", name: "Gmail account 1" },
   "antonio.maya.official@gmail.com": { id: "MrF40yK3dky3O7Cz", name: "Gmail account 2" },
   "antonioandmayaadventures@gmail.com": { id: "JaJpq3hIJWFJXv4S", name: "Gmail account 3" },
   "larissasrhsbparents@gmail.com": { id: "TEZwdWAZWeaN7IL1", name: "Gmail account 4" },

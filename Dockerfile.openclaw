@@ -3,9 +3,16 @@ FROM ${OPENCLAW_IMAGE}
 
 USER root
 
-# ffmpeg is needed for audio format conversion before transcription
+# ffmpeg: audio format conversion before transcription
+# jq: JSON processing in shell scripts
+# chromium: headless browser for web tools
 RUN apt-get update -qq && \
-    apt-get install -y -qq --no-install-recommends ffmpeg && \
+    apt-get install -y -qq --no-install-recommends ffmpeg jq chromium && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set Chromium as the browser for OpenClaw (no sandbox needed in container)
+ENV CHROME_PATH=/usr/bin/chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
 
 USER node

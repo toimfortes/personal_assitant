@@ -110,7 +110,7 @@ async function getCookie() {
   const wf2 = (await wfResp2.json()).data;
   for (const node of wf2.nodes) {
     if (node.name === "Gmail Get All") {
-      node.credentials = { gmailOAuth2: { id: "jACGwijQXj0rEYqR", name: "Gmail account 1" } };
+      node.credentials = { gmailOAuth2: { id: "0YJAOX0ZGvKDcpAt", name: "Gmail account 1" } };
       node.parameters.limit = 50;
       node.parameters.filters = { q: "in:inbox category:primary after:2026/02/03 before:2026/03/07" };
     }

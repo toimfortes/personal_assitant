@@ -19,6 +19,8 @@ WORKFLOW_BACKFILL = ROOT / "n8n-workflows" / "backfill-gmail-triage.json"
 DEFAULT_OLLAMA_PRIMARY = "glm-4.7-flash"
 DEFAULT_OLLAMA_FALLBACK = "glm-4.7-flash"
 DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_TRIAGE_MODEL = "google-gemini-cli/gemini-3-flash-preview"
+DEFAULT_TRIAGE_BRIDGE_URL = "http://llm-bridge:11435/api/generate"
 
 
 def _load_settings() -> dict:
@@ -76,6 +78,12 @@ def _derive_model_env(settings: dict) -> dict[str, str]:
     }
 
 
+def _primary_triage_model(settings: dict) -> str:
+    llm = settings.get("llm", {}) if isinstance(settings.get("llm", {}), dict) else {}
+    primary = str(llm.get("primary", "")).strip()
+    return primary or DEFAULT_TRIAGE_MODEL
+
+
 def _upsert_env_file(path: Path, updates: dict[str, str]) -> None:
     if path.exists():
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -100,7 +108,7 @@ def _upsert_env_file(path: Path, updates: dict[str, str]) -> None:
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
-def _patch_workflow_ollama_model(path: Path) -> bool:
+def _patch_workflow_ollama_model(path: Path, primary_model: str) -> bool:
     data = json.loads(path.read_text(encoding="utf-8"))
     changed = False
 
@@ -108,17 +116,29 @@ def _patch_workflow_ollama_model(path: Path) -> bool:
         if node.get("name") != "AI Triage (Local Ollama)":
             continue
         params = node.get("parameters", {})
+        if params.get("url") != DEFAULT_TRIAGE_BRIDGE_URL:
+            params["url"] = DEFAULT_TRIAGE_BRIDGE_URL
+            changed = True
+
         body = params.get("bodyParameters", {})
         parameters = body.get("parameters", [])
-        for entry in parameters:
-            if entry.get("name") == "model":
-                desired = (
-                    '={{$env["N8N_OLLAMA_MODEL_PRIMARY"] || '
-                    '$env["N8N_OLLAMA_MODEL_FALLBACK"] || "glm-4.7-flash"}}'
-                )
-                if entry.get("value") != desired:
-                    entry["value"] = desired
+        if isinstance(parameters, list):
+            for entry in parameters:
+                if entry.get("name") == "model" and entry.get("value") != primary_model:
+                    entry["value"] = primary_model
                     changed = True
+
+        raw = params.get("jsonBody")
+        if isinstance(raw, str):
+            updated = re.sub(
+                r'\bmodel:\s*["\'][^"\']+["\']',
+                f'model: "{primary_model}"',
+                raw,
+                count=1,
+            )
+            if updated != raw:
+                params["jsonBody"] = updated
+                changed = True
 
     if changed:
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -155,12 +175,13 @@ def _patch_workflow_backfill_model(path: Path) -> bool:
 def main() -> int:
     settings = _load_settings()
     env_updates = _derive_model_env(settings)
+    primary_model = _primary_triage_model(settings)
 
     _upsert_env_file(ENV_PATH, env_updates)
     _upsert_env_file(ENV_EXAMPLE_PATH, env_updates)
 
-    changed_gmail = _patch_workflow_ollama_model(WORKFLOW_TRIAGE_GMAIL)
-    changed_outlook = _patch_workflow_ollama_model(WORKFLOW_TRIAGE_OUTLOOK)
+    changed_gmail = _patch_workflow_ollama_model(WORKFLOW_TRIAGE_GMAIL, primary_model)
+    changed_outlook = _patch_workflow_ollama_model(WORKFLOW_TRIAGE_OUTLOOK, primary_model)
     changed_backfill = _patch_workflow_backfill_model(WORKFLOW_BACKFILL)
 
     print(f"Synced model env vars from: {MODEL_SETTINGS_PATH}")

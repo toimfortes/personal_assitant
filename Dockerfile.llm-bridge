@@ -1,0 +1,19 @@
+FROM node:24-bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g @google/gemini-cli @anthropic-ai/claude-code @openai/codex
+
+WORKDIR /app
+
+COPY scripts/llm-http-bridge.mjs /app/llm-http-bridge.mjs
+
+ENV HOME=/home/node
+ENV PORT=11435
+ENV WORKSPACE_PATH=/workspace
+
+USER node
+
+CMD ["node", "/app/llm-http-bridge.mjs"]

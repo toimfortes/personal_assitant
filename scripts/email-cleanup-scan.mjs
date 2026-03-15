@@ -14,12 +14,12 @@ const N8N_URL = process.env.N8N_URL || "http://localhost:5678";
 const N8N_API_KEY = process.env.N8N_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZTRkZTAyMy1mMGMzLTRlODAtOThlYi04ZmRkOGE1MTdjYjMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYWNiZjI5MDMtNTVkMy00MTQ0LWE2ZjQtZTgyN2E1ZDFmNzliIiwiaWF0IjoxNzcyNzI3MjY5LCJleHAiOjE3NzUyNjA4MDB9.XrePb6rP8yypF-roL4kRGjVQhj8Um6VEJ9SS8pINgqM";
 
 const ACCOUNTS = [
-  { id: "jACGwijQXj0rEYqR", name: "Gmail account 1", email: "cortexcerebral@gmail.com" },
+  { id: "0YJAOX0ZGvKDcpAt", name: "Gmail account 1", email: "cortexcerebral@gmail.com" },
   { id: "MrF40yK3dky3O7Cz", name: "Gmail account 2", email: "antonio.maya.official@gmail.com" },
   { id: "JaJpq3hIJWFJXv4S", name: "Gmail account 3", email: "antonioandmayaadventures@gmail.com" },
   { id: "TEZwdWAZWeaN7IL1", name: "Gmail account 4", email: "larissasrhsbparents@gmail.com" },
   { id: "Xhbgajo1Ghik9Uf8", name: "Gmail account 5", email: "antonioforteslegal@gmail.com" },
-  { id: "aTfnlMCcGAbuzmBn", name: "Gmail account 6", email: "toimusa@gmail.com" },
+  { id: "PkoNf6XXZsGr9QVk", name: "Gmail account 6", email: "toimusa@gmail.com" },
 ];
 
 const SCAN_WF_ID = "scan-cleanup"; // Will be set after workflow creation

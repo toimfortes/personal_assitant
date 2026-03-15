@@ -1,144 +1,219 @@
-import puppeteer from 'puppeteer';
+#!/usr/bin/env node
 
-const N8N_URL = 'http://localhost:5678';
-const EMAIL = 'cortexcerebral@gmail.com';
-const PASSWORD = 'Hjkhjk.,23';
-const N8N_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZTRkZTAyMy1mMGMzLTRlODAtOThlYi04ZmRkOGE1MTdjYjMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYWNiZjI5MDMtNTVkMy00MTQ0LWE2ZjQtZTgyN2E1ZDFmNzliIiwiaWF0IjoxNzcyNzI3MjY5LCJleHAiOjE3NzUyNjA4MDB9.XrePb6rP8yypF-roL4kRGjVQhj8Um6VEJ9SS8pINgqM';
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-(async () => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = join(__dirname, "..");
+const ENV_PATH = join(PROJECT_ROOT, ".env");
 
-  const page = await browser.newPage();
-  page.setDefaultTimeout(60000);
+const envFile = loadEnvFile();
+const N8N_URL = process.env.N8N_URL || envFile.N8N_EDITOR_BASE_URL || "http://localhost:5678";
+const EMAIL = process.env.N8N_EMAIL || envFile.N8N_EMAIL || "cortexcerebral@gmail.com";
+const PASSWORD = process.env.N8N_PASSWORD || envFile.N8N_PASSWORD || "Hjkhjk.,23";
+const WORKFLOW_ID = process.env.N8N_WORKFLOW_ID || "";
+const WORKFLOW_NAME = process.env.N8N_WORKFLOW_NAME || "Gmail to Notion (Investor Triage) - cortexcerebral@gmail.com";
+const EXECUTION_LIMIT = Number(process.env.N8N_EXECUTION_LIMIT || 20);
 
-  // Login
-  await page.goto(N8N_URL, { waitUntil: 'networkidle2' });
-  const allInputs = await page.$$('input');
-  await allInputs[0].type(EMAIL, { delay: 20 });
-  await allInputs[1].type(PASSWORD, { delay: 20 });
-  const signInBtn = await page.$('button');
-  await signInBtn.click();
-  await new Promise(r => setTimeout(r, 3000));
-  await page.keyboard.press('Escape');
-  await new Promise(r => setTimeout(r, 500));
-
-  // Get current latest execution ID before triggering
-  const beforeResp = await fetch(`${N8N_URL}/api/v1/executions?workflowId=FgXJ0dTlOibbKHr0&limit=1`, {
-    headers: { 'X-N8N-API-KEY': N8N_API_KEY },
-  });
-  const beforeList = await beforeResp.json();
-  const lastExecId = beforeList.data?.[0]?.id || 0;
-  console.log(`Last execution ID before trigger: ${lastExecId}`);
-
-  // Go to workflow editor and execute
-  await page.goto(`${N8N_URL}/workflow/FgXJ0dTlOibbKHr0`, { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 2000));
-
-  // Close drawers
-  const closeButtons = await page.$$('.el-drawer__close-btn');
-  for (const btn of closeButtons) { try { await btn.click(); } catch (e) {} }
-  await new Promise(r => setTimeout(r, 500));
-
-  console.log('=== EXECUTING ===');
-  const execBtn = await page.$('[data-test-id="execute-workflow-button"]');
-  await execBtn.click();
-
-  // Wait for the new execution to appear
-  let executionId = null;
-  for (let i = 0; i < 20; i++) {
-    await new Promise(r => setTimeout(r, 2000));
-    const resp = await fetch(`${N8N_URL}/api/v1/executions?workflowId=FgXJ0dTlOibbKHr0&limit=1`, {
-      headers: { 'X-N8N-API-KEY': N8N_API_KEY },
-    });
-    const list = await resp.json();
-    const latest = list.data?.[0];
-    if (latest && latest.id > lastExecId) {
-      executionId = latest.id;
-      console.log(`New execution: #${executionId}, status: ${latest.status}`);
-      break;
+function loadEnvFile() {
+  const values = {};
+  try {
+    const raw = readFileSync(ENV_PATH, "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line || line.trim().startsWith("#") || !line.includes("=")) continue;
+      const [key, ...rest] = line.split("=");
+      values[key.trim()] = rest.join("=").trim();
     }
+  } catch {
+    // Fall back to process.env and defaults.
+  }
+  return values;
+}
+
+async function jsonFetch(url, options = {}) {
+  const resp = await fetch(url, options);
+  const text = await resp.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status} ${resp.statusText} for ${url}: ${JSON.stringify(data)}`);
+  }
+  return { resp, data };
+}
+
+async function login() {
+  const { resp } = await jsonFetch(`${N8N_URL}/rest/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      emailOrLdapLoginId: EMAIL,
+      password: PASSWORD,
+    }),
+  });
+
+  const cookie = (resp.headers.getSetCookie?.() || [])
+    .map((value) => value.split(";", 1)[0])
+    .find((value) => value.startsWith("n8n-auth="));
+
+  if (!cookie) {
+    throw new Error("n8n-auth cookie missing after login");
   }
 
-  if (!executionId) {
-    console.log('Could not find new execution');
-    await browser.close();
-    return;
-  }
+  return cookie;
+}
 
-  // Poll for completion
-  for (let i = 0; i < 120; i++) {
-    await new Promise(r => setTimeout(r, 5000));
-    const statusResp = await fetch(`${N8N_URL}/api/v1/executions/${executionId}`, {
-      headers: { 'X-N8N-API-KEY': N8N_API_KEY },
-    });
-    const exec = await statusResp.json();
-    const status = exec.status;
+async function listWorkflows(cookie) {
+  const { data } = await jsonFetch(`${N8N_URL}/rest/workflows?pageSize=100`, {
+    headers: { Cookie: cookie },
+  });
+  return data.data || [];
+}
 
-    if (status !== 'running' && status !== 'new' && status !== 'waiting') {
-      console.log(`\nExecution #${executionId} finished: status=${status}`);
+function pickWorkflow(workflows) {
+  const exactId = WORKFLOW_ID ? workflows.find((workflow) => workflow.id === WORKFLOW_ID) : null;
+  if (exactId) return exactId;
 
-      // Get detailed results
-      const detailResp = await fetch(`${N8N_URL}/api/v1/executions/${executionId}?includeData=true`, {
-        headers: { 'X-N8N-API-KEY': N8N_API_KEY },
-      });
-      const detail = await detailResp.json();
-      const rd = detail.data?.resultData || {};
+  const exactName = workflows.find((workflow) => workflow.name === WORKFLOW_NAME);
+  if (exactName) return exactName;
 
-      if (rd.error) {
-        console.log('\n=== EXECUTION ERROR ===');
-        console.log(JSON.stringify(rd.error, null, 2).slice(0, 500));
+  return workflows.find((workflow) => workflow.active && workflow.name?.startsWith("Gmail to Notion (Investor Triage) - ")) || null;
+}
+
+async function getWorkflow(cookie, workflowId) {
+  const { data } = await jsonFetch(`${N8N_URL}/rest/workflows/${workflowId}`, {
+    headers: { Cookie: cookie },
+  });
+  return data.data;
+}
+
+async function listExecutions(cookie) {
+  const { data } = await jsonFetch(`${N8N_URL}/rest/executions?limit=${EXECUTION_LIMIT}`, {
+    headers: { Cookie: cookie },
+  });
+  return data.data?.results || [];
+}
+
+async function getExecution(cookie, executionId) {
+  const { data } = await jsonFetch(`${N8N_URL}/rest/executions/${executionId}?includeData=true`, {
+    headers: { Cookie: cookie },
+  });
+  return data.data || data;
+}
+
+function summarizeRunData(runData = {}) {
+  for (const [name, runs] of Object.entries(runData)) {
+    for (const run of runs) {
+      let items = 0;
+      const outputs = run.data?.main || [];
+      for (const out of outputs) {
+        if (out) items += out.length;
       }
+      const err = run.error;
+      console.log(`\n${err ? "FAIL" : " OK "} | ${name}: ${err ? err.message?.slice(0, 300) : `${items} items`}`);
 
-      if (rd.runData) {
-        for (const [name, runs] of Object.entries(rd.runData)) {
-          for (const run of runs) {
-            let items = 0;
-            const outputs = run.data?.main || [];
-            for (const out of outputs) {
-              if (out) items += out.length;
-            }
-            const err = run.error;
-            console.log(`\n${err ? 'FAIL' : ' OK '} | ${name}: ${err ? err.message?.slice(0, 300) : items + ' items'}`);
+      if (err || !outputs[0]?.[0]?.json) continue;
 
-            // Show sample data for key nodes
-            if (!err && outputs[0]?.[0]?.json) {
-              const first = outputs[0][0].json;
-              if (name === 'Add to Notion') {
-                if (first.object === 'page') {
-                  console.log(`  SUCCESS: Created page ${first.url}`);
-                } else if (first.status) {
-                  console.log(`  Notion response: ${first.status} ${first.message || ''}`);
-                } else {
-                  console.log(`  Response keys: ${Object.keys(first).join(', ')}`);
-                  console.log(`  Response: ${JSON.stringify(first).slice(0, 300)}`);
-                }
-              } else if (name === 'AI Triage (Local Ollama)') {
-                const resp = first.response;
-                if (resp) {
-                  try {
-                    const parsed = JSON.parse(resp);
-                    console.log(`  AI result: important=${parsed.is_important}, cat=${parsed.category}`);
-                  } catch(e) {
-                    console.log(`  Raw response: ${resp.slice(0, 200)}`);
-                  }
-                }
-              } else if (name === 'Gmail Get All') {
-                console.log(`  First email: ${first.Subject || first.subject || 'no subject'}`);
-                console.log(`  From: ${first.From || first.from || 'unknown'}`);
-              }
-            }
+      const first = outputs[0][0].json;
+      if (name === "Add to Notion") {
+        if (first.object === "page") {
+          console.log(`  SUCCESS: Created page ${first.url}`);
+        } else if (first.status) {
+          console.log(`  Notion response: ${first.status} ${first.message || ""}`);
+        } else {
+          console.log(`  Response keys: ${Object.keys(first).join(", ")}`);
+          console.log(`  Response: ${JSON.stringify(first).slice(0, 300)}`);
+        }
+      } else if (name === "AI Triage (Local Ollama)") {
+        const resp = first.response || first.thinking;
+        if (resp) {
+          try {
+            const parsed = JSON.parse(resp);
+            console.log(`  AI result: important=${parsed.is_important}, cat=${parsed.category}`);
+          } catch {
+            console.log(`  Raw response: ${String(resp).slice(0, 200)}`);
           }
         }
+        if (first.model) {
+          console.log(`  Model: ${first.model}`);
+        }
+        if (first.provider) {
+          console.log(`  Provider: ${first.provider}`);
+        }
+        if (first.fallback_used !== undefined) {
+          console.log(`  Fallback used: ${first.fallback_used}`);
+        }
+      } else if (name === "Gmail Get All" || name === "Gmail Trigger") {
+        console.log(`  First email: ${first.Subject || first.subject || "no subject"}`);
+        console.log(`  From: ${first.From || first.from || "unknown"}`);
       }
-
-      break;
     }
+  }
+}
 
-    if (i % 6 === 0) console.log(`  [${(i+1)*5}s] status: ${status}`);
+function inflateExecutionData(flat) {
+  const cache = new Map();
+
+  const decodeIndex = (idx) => {
+    if (cache.has(idx)) return cache.get(idx);
+    const raw = flat[idx];
+    let decoded;
+    if (Array.isArray(raw)) {
+      decoded = raw.map(decodeValue);
+    } else if (raw && typeof raw === "object") {
+      decoded = Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, decodeValue(value)]));
+    } else {
+      decoded = raw;
+    }
+    cache.set(idx, decoded);
+    return decoded;
+  };
+
+  const decodeValue = (value) => {
+    if (typeof value === "string" && /^\d+$/.test(value)) {
+      const idx = Number(value);
+      if (idx >= 0 && idx < flat.length) return decodeIndex(idx);
+    }
+    if (Array.isArray(value)) return value.map(decodeValue);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, decodeValue(inner)]));
+    }
+    return value;
+  };
+
+  return decodeIndex(0);
+}
+
+(async () => {
+  const cookie = await login();
+  const workflowSummary = pickWorkflow(await listWorkflows(cookie));
+  if (!workflowSummary) {
+    throw new Error(`Could not find a runnable workflow for id='${WORKFLOW_ID}' name='${WORKFLOW_NAME}'`);
   }
 
-  await browser.close();
-})();
+  const workflowData = await getWorkflow(cookie, workflowSummary.id);
+  console.log(`Using workflow: ${workflowData.name} (${workflowData.id})`);
+  console.log("=== VERIFYING LATEST EXECUTION ===");
+
+  const latest = (await listExecutions(cookie)).find((execution) => execution.workflowId === workflowData.id);
+  if (!latest) {
+    throw new Error(`No recent executions found for workflow ${workflowData.id}`);
+  }
+
+  console.log(`Latest execution: #${latest.id} status=${latest.status} startedAt=${latest.startedAt}`);
+  const detail = await getExecution(cookie, latest.id);
+  let rd = detail.resultData || {};
+  if (!rd.runData && typeof detail.data === "string") {
+    const inflated = inflateExecutionData(JSON.parse(detail.data));
+    rd = inflated?.resultData || rd;
+  }
+
+  if (rd.error) {
+    console.log("\n=== EXECUTION ERROR ===");
+    console.log(JSON.stringify(rd.error, null, 2).slice(0, 500));
+  }
+
+  summarizeRunData(rd.runData);
+})().catch((error) => {
+  console.error(error.stack || String(error));
+  process.exit(1);
+});
