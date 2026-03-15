@@ -3,14 +3,13 @@
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import n8nConfig from "./n8n-script-config.cjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
 const MAILBOX_MAP_PATH = join(PROJECT_ROOT, "config", "mailbox_map.json");
 
-const N8N_URL = process.env.N8N_URL || "http://127.0.0.1:5678";
-const LOGIN_EMAIL = process.env.N8N_EMAIL || "cortexcerebral@gmail.com";
-const LOGIN_PASSWORD = process.env.N8N_PASSWORD || "Hjkhjk.,23";
+const { N8N_URL, N8N_EMAIL: LOGIN_EMAIL, N8N_PASSWORD: LOGIN_PASSWORD } = n8nConfig;
 
 function parseArgs(argv) {
   return {

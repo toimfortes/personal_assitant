@@ -4,11 +4,10 @@
  * via Puppeteer driving the n8n UI.
  */
 import puppeteer from 'puppeteer';
+import n8nConfig from './n8n-script-config.cjs';
 
-const N8N_URL = 'http://127.0.0.1:5678';
+const { N8N_URL, N8N_EMAIL, N8N_PASSWORD } = n8nConfig;
 const WORKFLOW_ID = 'PGA0GAmNmnYEKWyR';
-const N8N_EMAIL = 'cortexcerebral@gmail.com';
-const N8N_PASSWORD = 'Hjkhjk.,23';
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 

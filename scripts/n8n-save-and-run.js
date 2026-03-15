@@ -1,8 +1,6 @@
 const puppeteer = require('puppeteer');
+const { N8N_URL, N8N_EMAIL: EMAIL, N8N_PASSWORD: PASSWORD } = require('./n8n-script-config.cjs');
 
-const N8N_URL = 'http://localhost:5678';
-const EMAIL = 'cortexcerebral@gmail.com';
-const PASSWORD = 'Hjkhjk.,23';
 const WORKFLOW_ID = 'mokeOVIdeUcbHYPU';
 
 (async () => {

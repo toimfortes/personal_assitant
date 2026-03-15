@@ -107,7 +107,12 @@ def contains_keyword(content: str, keyword: str) -> bool:
     return re.search(pattern, content) is not None
 
 
-def normalize_message(message: dict, important_domains: set[str], important_emails: set[str], bill_keywords: set[str]) -> dict:
+def normalize_message(
+    message: dict,
+    important_domains: set[str],
+    important_emails: set[str],
+    bill_keywords: set[str],
+) -> dict:
     from_field = message.get("from")
     sender_raw = ""
     if isinstance(from_field, dict):
@@ -115,7 +120,9 @@ def normalize_message(message: dict, important_domains: set[str], important_emai
         sender_raw = email_address.get("address") or email_address.get("name") or ""
     elif isinstance(from_field, str):
         sender_raw = from_field
-    email_match = re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", sender_raw or "")
+    email_match = re.search(
+        r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", sender_raw or ""
+    )
     sender_email = (email_match.group(0) if email_match else sender_raw).lower()
     sender_domain = sender_email.split("@", 1)[1] if "@" in sender_email else ""
     subject = str(message.get("subject") or "")
@@ -132,7 +139,9 @@ def normalize_message(message: dict, important_domains: set[str], important_emai
         if addr:
             to_recipients.append(addr.lower())
     content = f"{subject}\n{body}".lower()
-    mentions_antonio = "antonio" in content or any("antonio" in value for value in to_recipients)
+    mentions_antonio = "antonio" in content or any(
+        "antonio" in value for value in to_recipients
+    )
     request_keywords = (
         "please",
         "can you",
@@ -162,12 +171,21 @@ def normalize_message(message: dict, important_domains: set[str], important_emai
         "payment completed",
         "deposit received",
     )
-    direct_request_detected = any(contains_keyword(content, keyword) for keyword in request_keywords)
-    funds_info_detected = any(contains_keyword(content, keyword) for keyword in funds_info_keywords)
+    direct_request_detected = any(
+        contains_keyword(content, keyword) for keyword in request_keywords
+    )
+    funds_info_detected = any(
+        contains_keyword(content, keyword) for keyword in funds_info_keywords
+    )
     important_email_match = sender_email in important_emails
-    important_domain_match = any(sender_domain == value or sender_domain.endswith(f".{value}") for value in important_domains)
+    important_domain_match = any(
+        sender_domain == value or sender_domain.endswith(f".{value}")
+        for value in important_domains
+    )
     bill_detected = any(contains_keyword(content, keyword) for keyword in bill_keywords)
-    bill_escalation_detected = bill_detected and direct_request_detected and mentions_antonio
+    bill_escalation_detected = (
+        bill_detected and direct_request_detected and mentions_antonio
+    )
     reasons = []
     if bill_detected:
         reasons.append("bill_keyword")
@@ -256,7 +274,9 @@ def parse_ollama_output(raw: str) -> dict:
     return json.loads(clean_json_text(candidate))
 
 
-def run_command(args: list[str], prompt: str, timeout: int) -> subprocess.CompletedProcess:
+def run_command(
+    args: list[str], prompt: str, timeout: int
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         args,
         input=prompt,
@@ -271,9 +291,17 @@ def run_command(args: list[str], prompt: str, timeout: int) -> subprocess.Comple
 def call_provider(provider_model: str, prompt: str, timeout: int) -> tuple[dict, dict]:
     provider, model = provider_model.split("/", 1)
     if provider == "google-gemini-cli":
-        proc = run_command(["gemini", "-m", model, "-p", "", "--output-format", "json"], prompt, timeout)
+        proc = run_command(
+            ["gemini", "-m", model, "-p", "", "--output-format", "json"],
+            prompt,
+            timeout,
+        )
         if proc.returncode != 0:
-            raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"{provider_model} exited {proc.returncode}")
+            raise RuntimeError(
+                proc.stderr.strip()
+                or proc.stdout.strip()
+                or f"{provider_model} exited {proc.returncode}"
+            )
         return parse_gemini_output(proc.stdout), {"provider": provider_model}
 
     if provider == "anthropic":
@@ -294,7 +322,11 @@ def call_provider(provider_model: str, prompt: str, timeout: int) -> tuple[dict,
             timeout,
         )
         if proc.returncode != 0:
-            raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"{provider_model} exited {proc.returncode}")
+            raise RuntimeError(
+                proc.stderr.strip()
+                or proc.stdout.strip()
+                or f"{provider_model} exited {proc.returncode}"
+            )
         return parse_claude_output(proc.stdout), {"provider": provider_model}
 
     if provider == "openai-codex":
@@ -320,7 +352,11 @@ def call_provider(provider_model: str, prompt: str, timeout: int) -> tuple[dict,
                 timeout,
             )
             if proc.returncode != 0:
-                raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"{provider_model} exited {proc.returncode}")
+                raise RuntimeError(
+                    proc.stderr.strip()
+                    or proc.stdout.strip()
+                    or f"{provider_model} exited {proc.returncode}"
+                )
             return parse_codex_output(output_path), {"provider": provider_model}
         finally:
             try:
@@ -355,7 +391,9 @@ def derived_category(context: dict) -> str:
 def feedback_for(context: dict, ai: dict) -> str | None:
     if ai["is_important"]:
         return None
-    if context["funds_info_detected"] or (context["bill_detected"] and not context["bill_escalation_detected"]):
+    if context["funds_info_detected"] or (
+        context["bill_detected"] and not context["bill_escalation_detected"]
+    ):
         return "Needs Rule"
     if context["important_list_match"]:
         return "Misflagged"
@@ -380,7 +418,11 @@ def postprocess_ai(context: dict, ai: dict) -> dict:
         result["is_important"] = False
         result["is_bill"] = True
     if result["category"] not in ALLOWED_CATEGORIES:
-        result["category"] = derived_category(context) if not result["is_important"] else ("Bill" if result["is_bill"] else "Important")
+        result["category"] = (
+            derived_category(context)
+            if not result["is_important"]
+            else ("Bill" if result["is_bill"] else "Important")
+        )
     if not result["is_important"]:
         if context["bill_detected"]:
             result["category"] = "Bill"
@@ -391,7 +433,11 @@ def postprocess_ai(context: dict, ai: dict) -> dict:
     if result["is_important"] and not result["suggested_action"]:
         result["suggested_action"] = "Review and reply if needed."
     if not result["reason"]:
-        result["reason"] = context["rule_reason"] or ("Actionable work email." if result["is_important"] else "Informational email.")
+        result["reason"] = context["rule_reason"] or (
+            "Actionable work email."
+            if result["is_important"]
+            else "Informational email."
+        )
     if not result["summary"]:
         result["summary"] = context["subject"][:180] or "Email reviewed."
     result["triage_feedback"] = feedback_for(context, result)
@@ -407,7 +453,9 @@ def notion_headers(env: dict[str, str]) -> dict[str, str]:
     }
 
 
-def notion_request(url: str, headers: dict[str, str], method: str = "GET", body: dict | None = None) -> dict:
+def notion_request(
+    url: str, headers: dict[str, str], method: str = "GET", body: dict | None = None
+) -> dict:
     response = requests.request(method, url, headers=headers, json=body, timeout=60)
     response.raise_for_status()
     return response.json() if response.content else {}
@@ -422,7 +470,9 @@ def login_cookie(email: str, password: str) -> str:
     )
     response.raise_for_status()
     cookies = response.headers.get("set-cookie", "").split(", ")
-    cookie = "; ".join([value.split(";", 1)[0] for value in cookies if value.startswith("n8n-auth=")])
+    cookie = "; ".join(
+        [value.split(";", 1)[0] for value in cookies if value.startswith("n8n-auth=")]
+    )
     if not cookie:
         raise RuntimeError("Failed to obtain n8n-auth cookie")
     return cookie
@@ -459,7 +509,9 @@ def decode_execution_data(flat):
 
 def build_message_map(execution_payload: dict) -> dict[str, dict]:
     decoded = decode_execution_data(json.loads(execution_payload["data"]))
-    messages = decoded["resultData"]["runData"]["Microsoft 365 Email"][0]["data"]["main"][0]
+    messages = decoded["resultData"]["runData"]["Microsoft 365 Email"][0]["data"][
+        "main"
+    ][0]
     mapping: dict[str, dict] = {}
     for item in messages:
         message = item["json"]
@@ -469,13 +521,18 @@ def build_message_map(execution_payload: dict) -> dict[str, dict]:
     return mapping
 
 
-def query_failed_pages(headers: dict[str, str], data_source_id: str, limit: int | None) -> list[dict]:
+def query_failed_pages(
+    headers: dict[str, str], data_source_id: str, limit: int | None
+) -> list[dict]:
     body = {
         "page_size": 100,
         "filter": {
             "and": [
                 {"property": "Email Account", "rich_text": {"contains": "Outlook"}},
-                {"property": "Core Request", "rich_text": {"contains": "AI triage failed"}},
+                {
+                    "property": "Core Request",
+                    "rich_text": {"contains": "AI triage failed"},
+                },
             ]
         },
     }
@@ -501,22 +558,42 @@ def query_failed_pages(headers: dict[str, str], data_source_id: str, limit: int 
 def fetch_pages_by_id(headers: dict[str, str], page_ids: list[str]) -> list[dict]:
     pages = []
     for page_id in page_ids:
-        pages.append(notion_request(f"https://api.notion.com/v1/pages/{quote(page_id)}", headers, method="GET"))
+        pages.append(
+            notion_request(
+                f"https://api.notion.com/v1/pages/{quote(page_id)}",
+                headers,
+                method="GET",
+            )
+        )
     return pages
 
 
 def update_page(headers: dict[str, str], page_id: str, triage: dict) -> None:
     body = {
         "properties": {
-            "Core Request": {"rich_text": [{"text": {"content": triage["summary"][:2000]}}]},
-            "Importance Reason": {"rich_text": [{"text": {"content": triage["reason"][:2000]}}]},
+            "Core Request": {
+                "rich_text": [{"text": {"content": triage["summary"][:2000]}}]
+            },
+            "Importance Reason": {
+                "rich_text": [{"text": {"content": triage["reason"][:2000]}}]
+            },
             "Category": {"select": {"name": triage["category"]}},
-            "Reply Draft": {"rich_text": [{"text": {"content": triage["suggested_action"][:2000]}}]},
+            "Reply Draft": {
+                "rich_text": [{"text": {"content": triage["suggested_action"][:2000]}}]
+            },
             "Status": {"select": {"name": triage["status"]}},
-            "Triage Feedback": {"select": ({"name": triage["triage_feedback"]} if triage["triage_feedback"] else None)},
+            "Triage Feedback": {
+                "select": (
+                    {"name": triage["triage_feedback"]}
+                    if triage["triage_feedback"]
+                    else None
+                )
+            },
         }
     }
-    notion_request(f"https://api.notion.com/v1/pages/{page_id}", headers, method="PATCH", body=body)
+    notion_request(
+        f"https://api.notion.com/v1/pages/{page_id}", headers, method="PATCH", body=body
+    )
 
 
 def append_jsonl(path: Path, payload: dict) -> None:
@@ -525,19 +602,24 @@ def append_jsonl(path: Path, payload: dict) -> None:
 
 
 def main() -> None:
+    env = load_env()
     parser = argparse.ArgumentParser()
     parser.add_argument("--execution-id", default=DEFAULT_EXECUTION_ID)
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--n8n-email", default="cortexcerebral@gmail.com")
-    parser.add_argument("--n8n-password", default="Hjkhjk.,23")
+    parser.add_argument(
+        "--n8n-email", default=env.get("N8N_EMAIL", "cortexcerebral@gmail.com")
+    )
+    parser.add_argument("--n8n-password", default=env.get("N8N_PASSWORD", ""))
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
     parser.add_argument("--sleep-ms", type=int, default=250)
-    parser.add_argument("--debug-log", default=str(PROJECT_ROOT / "data" / "outlook_retriage_debug.jsonl"))
+    parser.add_argument(
+        "--debug-log",
+        default=str(PROJECT_ROOT / "data" / "outlook_retriage_debug.jsonl"),
+    )
     parser.add_argument("--page-id", action="append", default=[])
     parser.add_argument("--stop-on-provider-failure", action="store_true", default=True)
     args = parser.parse_args()
 
-    env = load_env()
     model_order = load_model_order()
     important_domains, important_emails, bill_keywords = load_rules()
     headers = notion_headers(env)
@@ -547,7 +629,11 @@ def main() -> None:
     if args.page_id:
         pages = fetch_pages_by_id(headers, args.page_id)
     else:
-        pages = query_failed_pages(headers, env.get("NOTION_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_ID), args.limit)
+        pages = query_failed_pages(
+            headers,
+            env.get("NOTION_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_ID),
+            args.limit,
+        )
     debug_path = Path(args.debug_log)
     if debug_path.exists():
         debug_path.unlink()
@@ -563,16 +649,28 @@ def main() -> None:
     }
 
     for idx, page in enumerate(pages, start=1):
-        title = "".join(part.get("plain_text", "") for part in page["properties"]["Name"]["title"])
+        title = "".join(
+            part.get("plain_text", "") for part in page["properties"]["Name"]["title"]
+        )
         link = page["properties"].get("Original Link", {}).get("url")
         if not link or link not in message_map:
             missing = {"page_id": page["id"], "title": title, "link": link}
             summary["missing_messages"].append(missing)
-            append_jsonl(debug_path, {"index": idx, "title": title, "error": "missing_message", "link": link})
+            append_jsonl(
+                debug_path,
+                {
+                    "index": idx,
+                    "title": title,
+                    "error": "missing_message",
+                    "link": link,
+                },
+            )
             continue
 
         message = message_map[link]
-        context = normalize_message(message, important_domains, important_emails, bill_keywords)
+        context = normalize_message(
+            message, important_domains, important_emails, bill_keywords
+        )
         prompt = triage_prompt(context)
         ai_raw = None
         failures = []
@@ -580,14 +678,31 @@ def main() -> None:
 
         for provider_model in model_order:
             try:
-                ai_raw, provider_meta = call_provider(provider_model, prompt, args.timeout)
+                ai_raw, provider_meta = call_provider(
+                    provider_model, prompt, args.timeout
+                )
                 provider_used = provider_meta["provider"]
                 break
             except Exception as exc:
                 failures.append({"provider": provider_model, "error": str(exc)})
-                summary["provider_failures"].append({"page_id": page["id"], "title": title, "provider": provider_model, "error": str(exc)})
+                summary["provider_failures"].append(
+                    {
+                        "page_id": page["id"],
+                        "title": title,
+                        "provider": provider_model,
+                        "error": str(exc),
+                    }
+                )
                 if args.stop_on_provider_failure:
-                    append_jsonl(debug_path, {"index": idx, "title": title, "provider_failures": failures, "stopped": True})
+                    append_jsonl(
+                        debug_path,
+                        {
+                            "index": idx,
+                            "title": title,
+                            "provider_failures": failures,
+                            "stopped": True,
+                        },
+                    )
                     raise
 
         if ai_raw is None or provider_used is None:
@@ -596,7 +711,9 @@ def main() -> None:
         triage = postprocess_ai(context, ai_raw)
         update_page(headers, page["id"], triage)
         summary["processed"] += 1
-        summary["provider_counts"][provider_used] = summary["provider_counts"].get(provider_used, 0) + 1
+        summary["provider_counts"][provider_used] = (
+            summary["provider_counts"].get(provider_used, 0) + 1
+        )
         if triage["triage_feedback"]:
             summary["feedback_marked"] += 1
         else:

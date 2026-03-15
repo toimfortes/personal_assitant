@@ -4,9 +4,9 @@
  * Blocked senders are auto-rejected (force_spam = true, is_important = false).
  */
 
-const N8N_URL = "http://localhost:5678";
 const WF_ID = "FgXJ0dTlOibbKHr0";
 const fs = require("fs");
+const { N8N_URL, N8N_EMAIL, N8N_PASSWORD } = require("./n8n-script-config.cjs");
 
 // Read current spam rules from CSV
 const rulesContent = fs.readFileSync("config/triage_rules.csv", "utf8");
@@ -24,7 +24,7 @@ async function getCookie() {
   const resp = await fetch(`${N8N_URL}/rest/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ emailOrLdapLoginId: "cortexcerebral@gmail.com", password: "Hjkhjk.,23" }),
+    body: JSON.stringify({ emailOrLdapLoginId: N8N_EMAIL, password: N8N_PASSWORD }),
   });
   return resp.headers.getSetCookie()?.find((c) => c.startsWith("n8n-auth="))?.split(";")[0] || "";
 }

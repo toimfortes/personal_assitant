@@ -10,7 +10,9 @@
  * Output: JSON array of sender objects sorted by email count descending.
  */
 
-const N8N_URL = process.env.N8N_URL || "http://localhost:5678";
+import n8nConfig from "./n8n-script-config.cjs";
+
+const { N8N_URL, N8N_EMAIL, N8N_PASSWORD } = n8nConfig;
 const N8N_API_KEY = process.env.N8N_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZTRkZTAyMy1mMGMzLTRlODAtOThlYi04ZmRkOGE1MTdjYjMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYWNiZjI5MDMtNTVkMy00MTQ0LWE2ZjQtZTgyN2E1ZDFmNzliIiwiaWF0IjoxNzcyNzI3MjY5LCJleHAiOjE3NzUyNjA4MDB9.XrePb6rP8yypF-roL4kRGjVQhj8Um6VEJ9SS8pINgqM";
 
 const ACCOUNTS = [
@@ -40,7 +42,7 @@ async function getCookie() {
   const resp = await fetch(`${N8N_URL}/rest/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ emailOrLdapLoginId: "cortexcerebral@gmail.com", password: "Hjkhjk.,23" }),
+    body: JSON.stringify({ emailOrLdapLoginId: N8N_EMAIL, password: N8N_PASSWORD }),
   });
   return resp.headers.getSetCookie()?.find((c) => c.startsWith("n8n-auth="))?.split(";")[0] || "";
 }

@@ -2,10 +2,9 @@
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import n8nConfig from "./n8n-script-config.cjs";
 
-const N8N_URL = process.env.N8N_URL || "http://127.0.0.1:5678";
-const LOGIN_EMAIL = process.env.N8N_EMAIL || "cortexcerebral@gmail.com";
-const LOGIN_PASSWORD = process.env.N8N_PASSWORD || "Hjkhjk.,23";
+const { N8N_URL, N8N_EMAIL: LOGIN_EMAIL, N8N_PASSWORD: LOGIN_PASSWORD } = n8nConfig;
 const LIVE_WORKFLOW_ID = process.env.OUTLOOK_TRIAGE_WORKFLOW_ID || "PGA0GAmNmnYEKWyR";
 const TEMPLATE_PATH = resolve("n8n-workflows/triage-outlook-to-notion.json");
 const GMAIL_BACKFILL_TEMPLATE_PATH = resolve("n8n-workflows/backfill-gmail-triage.json");

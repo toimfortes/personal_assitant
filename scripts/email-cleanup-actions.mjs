@@ -20,12 +20,13 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import n8nConfig from "./n8n-script-config.cjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
 const RULES_FILE = join(PROJECT_ROOT, "config", "triage_rules.csv");
 
-const N8N_URL = process.env.N8N_URL || "http://localhost:5678";
+const { N8N_URL, N8N_EMAIL, N8N_PASSWORD } = n8nConfig;
 
 const ACCOUNTS = {
   "cortexcerebral@gmail.com": { id: "0YJAOX0ZGvKDcpAt", name: "Gmail account 1" },
@@ -55,7 +56,7 @@ async function getCookie() {
   const resp = await fetch(`${N8N_URL}/rest/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ emailOrLdapLoginId: "cortexcerebral@gmail.com", password: "Hjkhjk.,23" }),
+    body: JSON.stringify({ emailOrLdapLoginId: N8N_EMAIL, password: N8N_PASSWORD }),
   });
   return resp.headers.getSetCookie()?.find((c) => c.startsWith("n8n-auth="))?.split(";")[0] || "";
 }

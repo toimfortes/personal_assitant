@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>n8n Auth Links</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.5;
+    }
+    a.button {
+      display: inline-block;
+      margin: 12px 12px 12px 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      text-decoration: none;
+    }
+    code {
+      display: block;
+      padding: 10px 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <h1>n8n Auth Links</h1>
+  <p>Sign in to n8n first, then click the provider links below in the same browser.</p>
+
+  <p><a class="button" href="http://127.0.0.1:5678/signin">Open n8n Sign In</a></p>
+
+  <p><a class="button" href="https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&amp;prompt=consent&amp;client_id=471402692897-qjhsv6r8lsmi0csvkt8i2b4aj3v0iisl.apps.googleusercontent.com&amp;redirect_uri=http%3A%2F%2Flocalhost%3A5678%2Frest%2Foauth2-credential%2Fcallback&amp;response_type=code&amp;state=eyJ0b2tlbiI6IloxNTJPSWNyLTBUaE1Ec1V3SVhMdnFRbmVRQnI5ejktVFNTbyIsImNyZWF0ZWRBdCI6MTc3MzQ5ODI2NTY0MCwiZGF0YSI6IlUyRnNkR1ZrWDE5NG90Wmh3ejV5NHZwNmNPV1B0MGlKQlRldTZWUzVqcVh1TFd3a0ZHWTB2QjRRWGNwYitPRUlYVXM4NTR4OXNvMnl3TXlDTVBFQ0c2eFU3aGkvNnJMaFg2aExJZm0xQ0hUYnZTUE4zcGNuWWxkY2Q5MFhtV1VKUWhWUk5mbTg2N2NiRkVJVExHYXNMZTF2NFhrYWd5eWI2eG9YTGhGK011bz0ifQ%3D%3D&amp;scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.labels+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.addons.current.action.compose+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.addons.current.message.action+https%3A%2F%2Fmail.google.com%2F+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.modify+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.compose">Authenticate Gmail</a></p>
+
+  <p><a class="button" href="https://login.microsoftonline.com/common/oauth2/v2.0/authorize?response_mode=query&amp;client_id=647a9557-12b6-4174-ace2-ba0011136aa8&amp;redirect_uri=http%3A%2F%2Flocalhost%3A5678%2Frest%2Foauth2-credential%2Fcallback&amp;response_type=code&amp;state=eyJ0b2tlbiI6Iks2dVpGSDNDLVVDd3FFNnpwV3dQZ2NYZlZXekxtUjBPc1lROCIsImNyZWF0ZWRBdCI6MTc3MzQ5ODI2NTY1MiwiZGF0YSI6IlUyRnNkR1ZrWDE4V0hUMWdNTkZzSmx5MkhUalQ1S0pQV2tvY1FMREFMR1ZVZmdlOWttSU51K0d2djM3Yi9pMjlJV3E0YXpQOHdsQ082bURPMWxaMmR4M09DS0ZRdW1lYzBiRVREakRVVnlwK1VmN2dydmg1ME9UL3p3VjNRcVk4VUo3SFF6d3p0N1RzSE4vUmpKc1crYlp3Y0ozNVdiVTZjUkZla3Q3WkovZz0ifQ%3D%3D&amp;scope=openid+offline_access+Contacts.Read+Contacts.ReadWrite+Calendars.Read+Calendars.Read.Shared+Calendars.ReadWrite+Mail.ReadWrite+Mail.ReadWrite.Shared+Mail.Send+Mail.Send.Shared+MailboxSettings.Read">Authenticate Microsoft Outlook</a></p>
+
+  <p>Sign-in page:</p>
+  <code>http://127.0.0.1:5678/signin</code>
+</body>
+</html>
